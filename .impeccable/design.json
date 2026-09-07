@@ -1,0 +1,136 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-09-06T20:28:00Z",
+  "title": "Design System: Meta Máxima Digital - Content CRM",
+  "extensions": {
+    "colorMeta": {
+      "surface-bg": {
+        "role": "canvas",
+        "displayName": "Deep Slate Canvas",
+        "canonical": "oklch(15% 0.02 260)",
+        "tonalRamp": ["#05070c", "#090d16", "#0f172a", "#1e293b", "#334155", "#475569", "#64748b", "#94a3b8"]
+      },
+      "surface-card": {
+        "role": "container",
+        "displayName": "Card Surface",
+        "canonical": "oklch(20% 0.03 260)",
+        "tonalRamp": ["#080c14", "#0f172a", "#182238", "#1e293b", "#334155", "#475569", "#64748b", "#cbd5e1"]
+      },
+      "accent-indigo": {
+        "role": "primary",
+        "displayName": "Active Indigo",
+        "canonical": "oklch(60% 0.22 275)",
+        "tonalRamp": ["#1e1b4b", "#312e81", "#3730a3", "#4338ca", "#4f46e5", "#6366f1", "#818cf8", "#c7d2fe"]
+      },
+      "accent-emerald": {
+        "role": "status-success",
+        "displayName": "Postado Emerald",
+        "canonical": "oklch(65% 0.18 155)",
+        "tonalRamp": ["#022c22", "#064e3b", "#065f46", "#047857", "#059669", "#10b981", "#34d399", "#a7f3d0"]
+      },
+      "accent-amber": {
+        "role": "status-alert",
+        "displayName": "Atraso Amber",
+        "canonical": "oklch(70% 0.18 75)",
+        "tonalRamp": ["#451a03", "#78350f", "#92400e", "#b45309", "#d97706", "#f59e0b", "#fbbf24", "#fde68a"]
+      },
+      "accent-rose": {
+        "role": "status-urgent",
+        "displayName": "Urgente Rose",
+        "canonical": "oklch(60% 0.22 15)",
+        "tonalRamp": ["#4c0519", "#881337", "#9f1239", "#be123c", "#e11d48", "#f43f5e", "#fb7185", "#fecdd3"]
+      },
+      "accent-cyan": {
+        "role": "status-production",
+        "displayName": "Produção Cyan",
+        "canonical": "oklch(75% 0.14 210)",
+        "tonalRamp": ["#164e63", "#155e75", "#0e7490", "#0891b2", "#06b6d4", "#22d3ee", "#67e8f9", "#cffafe"]
+      },
+      "accent-violet": {
+        "role": "funnel-fundo",
+        "displayName": "Funil Violet",
+        "canonical": "oklch(65% 0.22 290)",
+        "tonalRamp": ["#2e1065", "#3b0764", "#4c1d95", "#5b21b6", "#6d28d9", "#7c3aed", "#8b5cf6", "#a78bfa", "#c4b5fd"]
+      }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Display", "purpose": "Títulos de dashboard e contadores principais." },
+      "headline": { "displayName": "Headline", "purpose": "Cabeçalhos de colunas do Kanban e seções." },
+      "body": { "displayName": "Body", "purpose": "Textos de roteiro, observações e descrições." },
+      "label": { "displayName": "Label", "purpose": "Badges de funil, prioridade, responsável e status." }
+    },
+    "shadows": [
+      { "name": "card-hover", "value": "0 8px 24px rgba(0, 0, 0, 0.35)", "purpose": "Elevação sutil no hover de cards." },
+      { "name": "drag-active", "value": "0 16px 36px rgba(0, 0, 0, 0.5)", "purpose": "Elevação focal em cards sendo arrastados." }
+    ],
+    "motion": [
+      { "name": "ease-snappy", "value": "cubic-bezier(0.16, 1, 0.3, 1)", "purpose": "Transições rápidas e responsivas para drag & drop e filtros." }
+    ],
+    "breakpoints": [
+      { "name": "sm", "value": "640px" },
+      { "name": "md", "value": "768px" },
+      { "name": "lg", "value": "1024px" },
+      { "name": "xl", "value": "1280px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Botão principal de ação do CRM (ex: Criar Conteúdo).",
+      "html": "<button class=\"ds-btn-primary\">+ NOVO CONTEÚDO</button>",
+      "css": ".ds-btn-primary { background: #6366f1; color: #ffffff; padding: 8px 16px; font-weight: 600; font-size: 12px; border-radius: 6px; border: none; cursor: pointer; transition: all 0.15s; } .ds-btn-primary:hover { background: #4f46e5; transform: scale(1.02); }"
+    },
+    {
+      "name": "Status Pill (Postado)",
+      "kind": "chip",
+      "refersTo": "chip-status-postado",
+      "description": "Chip indicador de status postado no feed.",
+      "html": "<span class=\"ds-chip-postado\">POSTADO</span>",
+      "css": ".ds-chip-postado { background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3); padding: 2px 8px; border-radius: 9999px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }"
+    },
+    {
+      "name": "Overdue Alert Badge",
+      "kind": "chip",
+      "refersTo": "chip-alert-atrasado",
+      "description": "Badge de atenção crítica para conteúdos vencidos.",
+      "html": "<span class=\"ds-chip-atrasado\">⚠ ATRASADO</span>",
+      "css": ".ds-chip-atrasado { background: rgba(244, 63, 94, 0.18); color: #fb7185; border: 1px solid rgba(244, 63, 94, 0.35); padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 800; text-transform: uppercase; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Agency Mission Control",
+    "overview": "O design do sistema é focado na alta produtividade operacional de uma agência de marketing de alto padrão. Ele transmite autoridade, clareza cirúrgica e agilidade. Cada elemento em tela tem uma função prática imediata: identificar gargalos, acelerar aprovações, roteirizar e movimentar entregas no pipeline.",
+    "keyCharacteristics": [
+      "Superfícies escuras de alto contraste com separação milimétrica por bordas sutis.",
+      "Sinalização semântica por cores funcionais (Verde para Postado, Âmbar para Atrasado/Atenção, Azul/Índigo para Em Produção).",
+      "Números e datas alinhados em fonte tabular (tabular-nums) para escaneamento rápido.",
+      "Feedback tátil em todas as ações de drag-and-drop e cliques."
+    ],
+    "rules": [
+      {
+        "name": "The Status Contrast Rule",
+        "body": "Cores quentes e chamativas são restritas a estados críticos (atraso, urgência e publicação). Elementos inativos ou em repouso permanecem em tons neutros para não sobrecarregar a visão da equipe.",
+        "section": "colors"
+      },
+      {
+        "name": "The Flat-By-Default Rule",
+        "body": "Cards em repouso repousam sem sombras projetadas; ao iniciar o arraste ou abrir modal, uma sombra focal de elevação destaca a peça em manipulação.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do manter sincronização imediata entre Kanban e Calendário.",
+      "Do alertar claramente com badge vermelho/âmbar qualquer post com data vencida e status diferente de postado.",
+      "Do fornecer skeleton loaders rápidos durante o carregamento inicial.",
+      "Do exibir estados vazios amigáveis com botão de ação direta."
+    ],
+    "donts": [
+      "Don't utilizar gradientes violeta genéricos ou glassmorphism borrado.",
+      "Don't exigir recarregamento de página para refletir mudanças no pipeline.",
+      "Don't ocultar botões essenciais dentro de menus profundos.",
+      "Don't exibir dados fictícios como se fossem métricas reais de integrações."
+    ]
+  }
+}
