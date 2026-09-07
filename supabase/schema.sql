@@ -597,3 +597,181 @@ insert into public.historico_posts (post_id, usuario, acao, detalhe)
 select id, 'Lucas Silva', 'Criação do Conteúdo', 'Post criado na etapa A Gravar'
 from public.posts
 limit 3;
+
+-- ==============================================================================
+-- 19. TABELAS DE GOOGLE DRIVE (INTEGRAÇÃO, PASTAS POR STATUS E LOGS)
+-- ==============================================================================
+
+create table if not exists public.google_drive_integrations (
+  id uuid default uuid_generate_v4() primary key,
+  client_id text,
+  client_secret text,
+  refresh_token text,
+  root_folder_id text,
+  root_folder_name text,
+  status text default 'desconectado',
+  atualizado_em timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+create table if not exists public.google_drive_status_folders (
+  id uuid default uuid_generate_v4() primary key,
+  status post_status not null unique,
+  folder_id text not null,
+  folder_name text not null,
+  atualizado_em timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+create table if not exists public.google_drive_sync_logs (
+  id uuid default uuid_generate_v4() primary key,
+  post_id uuid references public.posts(id) on delete set null,
+  post_titulo text not null,
+  file_id text not null,
+  file_name text not null,
+  from_folder_id text,
+  to_folder_id text not null,
+  to_folder_name text not null,
+  status text not null, -- 'sucesso' | 'erro'
+  erro_mensagem text,
+  criado_em timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+-- ==============================================================================
+-- 20. TABELAS DE META ADS & CRIATIVOS DE TRÁFEGO PAGO
+-- ==============================================================================
+
+create table if not exists public.meta_ad_accounts (
+  id text primary key,
+  business_id text,
+  name text not null,
+  currency text default 'BRL',
+  account_status integer default 1,
+  timezone_name text default 'America/Sao_Paulo',
+  atualizado_em timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+create table if not exists public.meta_campaigns (
+  id text primary key,
+  account_id text references public.meta_ad_accounts(id) on delete cascade,
+  name text not null,
+  objective text not null,
+  status text default 'ACTIVE',
+  daily_budget numeric(12, 2),
+  lifetime_budget numeric(12, 2),
+  spend numeric(12, 2) default 0,
+  leads integer default 0,
+  cpl numeric(10, 2) default 0,
+  impressions integer default 0,
+  clicks integer default 0,
+  ctr numeric(6, 2) default 0,
+  created_time timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+create table if not exists public.meta_adsets (
+  id text primary key,
+  campaign_id text references public.meta_campaigns(id) on delete cascade,
+  name text not null,
+  status text default 'ACTIVE',
+  targeting_summary text,
+  daily_budget numeric(12, 2),
+  spend numeric(12, 2) default 0,
+  leads integer default 0,
+  cpl numeric(10, 2) default 0
+);
+
+create table if not exists public.meta_creatives (
+  id text primary key,
+  post_id uuid references public.posts(id) on delete set null,
+  name text not null,
+  thumbnail_url text,
+  title text,
+  body text,
+  format text,
+  criado_em timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+create table if not exists public.meta_ads (
+  id text primary key,
+  adset_id text references public.meta_adsets(id) on delete cascade,
+  campaign_id text references public.meta_campaigns(id) on delete cascade,
+  creative_id text references public.meta_creatives(id) on delete set null,
+  post_id uuid references public.posts(id) on delete set null,
+  name text not null,
+  status text default 'ACTIVE',
+  preview_url text,
+  spend numeric(12, 2) default 0,
+  impressions integer default 0,
+  reach integer default 0,
+  clicks integer default 0,
+  ctr numeric(6, 2) default 0,
+  cpc numeric(10, 2) default 0,
+  cpm numeric(10, 2) default 0,
+  leads integer default 0,
+  cpl numeric(10, 2) default 0,
+  conversions integer default 0,
+  cpa numeric(10, 2) default 0,
+  revenue numeric(12, 2) default 0,
+  roas numeric(8, 2) default 0,
+  atualizado_em timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+-- ==============================================================================
+-- 21. TABELAS DE META PIXEL & EVENTOS
+-- ==============================================================================
+
+create table if not exists public.meta_pixel_integrations (
+  id uuid default uuid_generate_v4() primary key,
+  pixel_id text not null unique,
+  name text not null,
+  status text default 'ativo',
+  last_event_time timestamp with time zone,
+  diagnostics text,
+  atualizado_em timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+create table if not exists public.meta_pixel_events (
+  id uuid default uuid_generate_v4() primary key,
+  pixel_id text references public.meta_pixel_integrations(pixel_id) on delete cascade,
+  event_name text not null,
+  event_count integer default 0,
+  last_fired_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  url text
+);
+
+-- ==============================================================================
+-- 22. TABELA UNIVERSAL DE AUDITORIA (AUDIT LOGS)
+-- ==============================================================================
+
+create table if not exists public.audit_logs (
+  id uuid default uuid_generate_v4() primary key,
+  user_name text not null,
+  user_email text,
+  user_avatar text,
+  action text not null,
+  category text not null, -- 'conteudo' | 'drive' | 'meta_ads' | 'pixel' | 'equipe' | 'sistema'
+  target_id text,
+  target_name text,
+  detail text,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+-- RLS para novas tabelas
+alter table public.google_drive_integrations enable row level security;
+alter table public.google_drive_status_folders enable row level security;
+alter table public.google_drive_sync_logs enable row level security;
+alter table public.meta_ad_accounts enable row level security;
+alter table public.meta_campaigns enable row level security;
+alter table public.meta_adsets enable row level security;
+alter table public.meta_creatives enable row level security;
+alter table public.meta_ads enable row level security;
+alter table public.meta_pixel_integrations enable row level security;
+alter table public.meta_pixel_events enable row level security;
+alter table public.audit_logs enable row level security;
+
+create policy "Permitir leitura para todos" on public.google_drive_status_folders for select using (true);
+create policy "Permitir leitura para todos" on public.google_drive_sync_logs for select using (true);
+create policy "Permitir leitura para todos" on public.meta_campaigns for select using (true);
+create policy "Permitir leitura para todos" on public.meta_ads for select using (true);
+create policy "Permitir leitura para todos" on public.meta_pixel_integrations for select using (true);
+create policy "Permitir leitura para todos" on public.meta_pixel_events for select using (true);
+create policy "Permitir leitura para todos" on public.audit_logs for select using (true);
+

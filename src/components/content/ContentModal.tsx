@@ -1,8 +1,17 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useContent } from '@/lib/context/ContentContext';
-import { Post, PostStatus, PostTipo, EtapaFunil, Prioridade, Plataforma } from '@/types';
+import { useContent, PostModalTab } from '@/lib/context/ContentContext';
+import {
+  Post,
+  PostStatus,
+  PostTipo,
+  EtapaFunil,
+  Prioridade,
+  Plataforma,
+  ClassificacaoConteudo,
+  UsoTrafegoPago,
+} from '@/types';
 import {
   X,
   Calendar,
@@ -23,7 +32,21 @@ import {
   Sparkles,
   ExternalLink,
   Plus,
+  Radio,
+  Send,
+  Megaphone,
+  Share2,
+  CheckCircle2,
+  DollarSign,
+  TrendingUp,
+  Folder,
+  ArrowRight,
+  ShieldCheck,
+  Eye,
+  MousePointerClick,
+  Users,
 } from 'lucide-react';
+import { GoogleDriveIcon, MetaIcon, InstagramIcon, FacebookIcon } from '@/components/icons/BrandIcons';
 
 export default function ContentModal() {
   const {
@@ -41,27 +64,68 @@ export default function ContentModal() {
     files,
     addFile,
     deleteFile,
+    driveFolders,
+    campaigns,
+    adSets,
+    ads,
+    creatives,
+    auditLogs,
+    moveGoogleDriveFile,
+    linkPostToAd,
+    integrations,
   } = useContent();
 
-  const [currentTab, setCurrentTab] = useState<'detalhes' | 'roteiro' | 'arquivos' | 'historico' | 'metricas'>('detalhes');
+  const [currentTab, setCurrentTab] = useState<PostModalTab>('detalhes');
   const [formData, setFormData] = useState<Partial<Post>>({});
   const [copiedScript, setCopiedScript] = useState(false);
   const [newTagInput, setNewTagInput] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [driveSyncing, setDriveSyncing] = useState(false);
+  const [driveSyncMessage, setDriveSyncMessage] = useState<string | null>(null);
+
+  // Check checklist items state (local helper for pre-publication)
+  const [checklist, setChecklist] = useState({
+    copyChecked: false,
+    mediaChecked: false,
+    bioLinkChecked: false,
+    assigneeChecked: false,
+  });
 
   useEffect(() => {
     if (selectedPost) {
       setFormData({ ...selectedPost });
-      setCurrentTab(modalTab);
+      setCurrentTab(modalTab || 'detalhes');
+      setChecklist({
+        copyChecked: !!selectedPost.legenda,
+        mediaChecked: !!selectedPost.thumbnail_url || files.some((f) => f.post_id === selectedPost.id),
+        bioLinkChecked: !!selectedPost.cta,
+        assigneeChecked: !!selectedPost.responsavel,
+      });
     }
-  }, [selectedPost, modalTab]);
+  }, [selectedPost, modalTab, files]);
 
   if (!isModalOpen || !selectedPost) return null;
 
   const postHistory = history.filter((h) => h.post_id === selectedPost.id);
   const postFiles = files.filter((f) => f.post_id === selectedPost.id);
+  const postAuditLogs = auditLogs.filter(
+    (l) => l.entity_id === selectedPost.id || (l.details && l.details.includes(selectedPost.id))
+  );
   const overdue = isOverdue(selectedPost);
+
+  // Drive integration state
+  const driveIntegration = integrations.find((i) => i.provedor === 'google_drive');
+  const isDriveConnected = driveIntegration?.status === 'conectado';
+  const currentStatusDriveFolder = driveFolders.find((df) => df.status === formData.status);
+
+  // Meta Ads integration state
+  const metaAdsIntegration = integrations.find((i) => i.provedor === 'meta_ads');
+  const isMetaAdsConnected = metaAdsIntegration?.status === 'conectado';
+  const linkedAd = ads.find((a) => a.id === formData.meta_ad_id || a.post_id === selectedPost.id);
+  const linkedCampaign = campaigns.find(
+    (c) => c.id === formData.meta_campaign_id || (linkedAd && c.id === linkedAd.campaign_id)
+  );
 
   const handleInputChange = (field: keyof Post, value: any) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -98,28 +162,36 @@ export default function ContentModal() {
   };
 
   const handleCopyFullScript = () => {
-    const scriptText = `🎬 ROTEIRO DE CONTEÚDO: ${formData.titulo}
+    const scriptText = `🎬 ROTEIRO ESTRUTURADO DE CONTEÚDO
 ==================================================
-TIPO: ${formData.tipo} | FUNIL: ${formData.etapa_funil?.toUpperCase()} | PLATAFORMA: ${formData.plataforma?.toUpperCase()}
+TÍTULO: ${formData.titulo}
+CLASSIFICAÇÃO: ${formData.classificacao?.toUpperCase() || 'ORGÂNICO'} | FORMATO: ${formData.tipo?.replace('_', ' ').toUpperCase()}
+FUNIL: ${formData.etapa_funil?.toUpperCase()} | PLATAFORMA: ${formData.plataforma?.toUpperCase()}
 DATA: ${formData.data_publicacao} às ${formData.hora_publicacao || '18:00'}
 RESPONSÁVEL: ${formData.responsavel}
 
-⚡ GANCHO (Primeiros 3 segundos):
+⚡ 1. HOOK / GANCHO (Primeiros 3 segundos):
 ${formData.gancho || 'Não definido'}
 
-📖 DESENVOLVIMENTO:
+📖 2. DESENVOLVIMENTO (Estrutura central do vídeo / slides):
 ${formData.roteiro_desenvolvimento || 'Não definido'}
 
-📊 PROVA / ARGUMENTAÇÃO:
+📊 3. PROVA / ARGUMENTAÇÃO / CASE:
 ${formData.roteiro_prova || 'Não definido'}
 
-🎯 CTA (Chamada para Ação):
+🎯 4. CTA (Chamada para Ação):
 ${formData.cta || 'Não definido'}
 
-📝 LEGENDA SUGERIDA:
+📝 5. LEGENDA SUGERIDA:
 ${formData.legenda || 'Não definida'}
+
+🏷️ 6. HASHTAGS:
+${formData.tags?.map((t) => `#${t}`).join(' ') || 'Não definidas'}
+
+🔗 7. REFERÊNCIAS & OBSERVAÇÕES:
+${formData.observacoes || 'Nenhuma'}
 ==================================================
-Meta Máxima Digital - Sistema de Conteúdo`;
+Meta Máxima Digital - Sistema de Conteúdo & Performance`;
 
     navigator.clipboard.writeText(scriptText);
     setCopiedScript(true);
@@ -146,20 +218,49 @@ Meta Máxima Digital - Sistema de Conteúdo`;
     });
   };
 
+  const handleSyncDriveNow = async () => {
+    if (!formData.status) return;
+    setDriveSyncing(true);
+    try {
+      const res = await moveGoogleDriveFile(selectedPost.id, formData.status as PostStatus);
+      if (res.success) {
+        setDriveSyncMessage(`Pasta sincronizada: "${res.folderName}"`);
+        setTimeout(() => setDriveSyncMessage(null), 3000);
+      }
+    } finally {
+      setDriveSyncing(false);
+    }
+  };
+
   return (
     <div
       role="dialog"
       aria-modal="true"
       aria-label="Detalhes do Conteúdo"
-      className="fixed inset-0 z-50 flex items-center justify-end bg-black/60 backdrop-blur-sm animate-in fade-in duration-200"
+      className="fixed inset-0 z-50 flex items-center justify-end bg-black/70 backdrop-blur-sm animate-in fade-in duration-200"
     >
-      <div className="flex h-full w-full max-w-3xl flex-col bg-slate-900 border-l border-slate-800 shadow-2xl text-slate-100">
+      <div className="flex h-full w-full max-w-4xl flex-col bg-[#0b0f19] border-l border-slate-800 shadow-2xl text-slate-100">
         
-        {/* Modal Header */}
-        <div className="flex items-center justify-between border-b border-slate-800 px-6 py-4 bg-slate-900/90 sticky top-0 z-10">
+        {/* Modal Top Header */}
+        <div className="flex items-center justify-between border-b border-slate-800 px-6 py-4 bg-slate-950/80 sticky top-0 z-20 backdrop-blur-md">
           <div className="flex items-center gap-3">
             <span className="text-xs font-semibold uppercase tracking-wider text-indigo-400 bg-indigo-500/10 px-2.5 py-1 rounded-md border border-indigo-500/20">
               {formData.tipo?.replace('_', ' ')}
+            </span>
+            <span
+              className={`text-xs font-semibold uppercase tracking-wider px-2.5 py-1 rounded-md border ${
+                formData.classificacao === 'patrocinado'
+                  ? 'text-amber-300 bg-amber-500/15 border-amber-500/30'
+                  : formData.classificacao === 'organico_patrocinado'
+                  ? 'text-emerald-300 bg-emerald-500/15 border-emerald-500/30'
+                  : 'text-slate-300 bg-slate-800/80 border-slate-700'
+              }`}
+            >
+              {formData.classificacao === 'patrocinado'
+                ? 'Patrocinado'
+                : formData.classificacao === 'organico_patrocinado'
+                ? 'Orgânico + Anúncio'
+                : 'Orgânico'}
             </span>
             {overdue && (
               <span className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-rose-400 bg-rose-500/15 px-2.5 py-1 rounded-md border border-rose-500/30">
@@ -167,7 +268,7 @@ Meta Máxima Digital - Sistema de Conteúdo`;
                 Atrasado
               </span>
             )}
-            <span className="text-xs text-slate-400">ID: {selectedPost.id}</span>
+            <span className="text-xs text-slate-400 font-mono hidden sm:inline">ID: {selectedPost.id}</span>
           </div>
 
           <div className="flex items-center gap-2">
@@ -197,8 +298,8 @@ Meta Máxima Digital - Sistema de Conteúdo`;
           </div>
         </div>
 
-        {/* Title & Quick Status Bar */}
-        <div className="p-6 pb-2 border-b border-slate-800/80 bg-slate-950/40">
+        {/* Title & Quick Controls Bar */}
+        <div className="p-6 pb-3 border-b border-slate-800/80 bg-slate-950/40">
           <input
             type="text"
             value={formData.titulo || ''}
@@ -209,7 +310,7 @@ Meta Máxima Digital - Sistema de Conteúdo`;
 
           <div className="mt-4 flex flex-wrap items-center gap-3 text-xs text-slate-400">
             {/* Status Selector */}
-            <div className="flex items-center gap-1.5 bg-slate-800/80 px-2.5 py-1 rounded-md border border-slate-700/60">
+            <div className="flex items-center gap-1.5 bg-slate-900 px-2.5 py-1.5 rounded-md border border-slate-800">
               <span className="text-slate-400 font-medium">Status:</span>
               <select
                 value={formData.status || 'a_gravar'}
@@ -221,27 +322,29 @@ Meta Máxima Digital - Sistema de Conteúdo`;
                 <option value="gravado" className="bg-slate-900 text-slate-100">GRAVADO</option>
                 <option value="a_editar" className="bg-slate-900 text-slate-100">A EDITAR</option>
                 <option value="editado" className="bg-slate-900 text-slate-100">EDITADO</option>
+                <option value="revisao" className="bg-slate-900 text-slate-100">EM REVISÃO</option>
+                <option value="aprovado" className="bg-slate-900 text-slate-100">APROVADO</option>
                 <option value="agendado" className="bg-slate-900 text-slate-100">AGENDADO</option>
-                <option value="postado" className="bg-slate-900 text-slate-100">POSTADO</option>
+                <option value="postado" className="bg-slate-900 text-emerald-400">POSTADO</option>
               </select>
             </div>
 
-            {/* Funnel Selector */}
-            <div className="flex items-center gap-1.5 bg-slate-800/80 px-2.5 py-1 rounded-md border border-slate-700/60">
+            {/* Funnel Stage Selector */}
+            <div className="flex items-center gap-1.5 bg-slate-900 px-2.5 py-1.5 rounded-md border border-slate-800">
               <span className="text-slate-400 font-medium">Funil:</span>
               <select
                 value={formData.etapa_funil || 'topo'}
                 onChange={(e) => handleInputChange('etapa_funil', e.target.value as EtapaFunil)}
                 className="bg-transparent text-slate-100 font-semibold focus:outline-none cursor-pointer uppercase"
               >
-                <option value="topo" className="bg-slate-900 text-indigo-400">Topo (Atração)</option>
-                <option value="meio" className="bg-slate-900 text-cyan-400">Meio (Nutrição)</option>
-                <option value="fundo" className="bg-slate-900 text-violet-400">Fundo (Conversão)</option>
+                <option value="topo" className="bg-slate-900 text-cyan-400">Topo (Atração)</option>
+                <option value="meio" className="bg-slate-900 text-indigo-400">Meio (Nutrição)</option>
+                <option value="fundo" className="bg-slate-900 text-emerald-400">Fundo (Conversão)</option>
               </select>
             </div>
 
             {/* Priority Selector */}
-            <div className="flex items-center gap-1.5 bg-slate-800/80 px-2.5 py-1 rounded-md border border-slate-700/60">
+            <div className="flex items-center gap-1.5 bg-slate-900 px-2.5 py-1.5 rounded-md border border-slate-800">
               <span className="text-slate-400 font-medium">Prioridade:</span>
               <select
                 value={formData.prioridade || 'normal'}
@@ -256,7 +359,7 @@ Meta Máxima Digital - Sistema de Conteúdo`;
             </div>
 
             {/* Date & Time */}
-            <div className="flex items-center gap-1.5 bg-slate-800/80 px-2.5 py-1 rounded-md border border-slate-700/60">
+            <div className="flex items-center gap-1.5 bg-slate-900 px-2.5 py-1.5 rounded-md border border-slate-800">
               <Calendar className="h-3.5 w-3.5 text-indigo-400" />
               <input
                 type="date"
@@ -274,13 +377,13 @@ Meta Máxima Digital - Sistema de Conteúdo`;
             </div>
           </div>
 
-          {/* Navigation Tabs */}
-          <div className="flex items-center gap-6 mt-6 border-b border-slate-800 text-xs font-semibold tracking-wide">
+          {/* 7 Navigation Tabs */}
+          <div className="flex items-center gap-4 mt-6 border-b border-slate-800 text-xs font-semibold tracking-wide overflow-x-auto no-scrollbar">
             <button
               onClick={() => setCurrentTab('detalhes')}
-              className={`flex items-center gap-2 pb-3 border-b-2 transition-colors ${
+              className={`flex items-center gap-1.5 pb-2.5 border-b-2 transition-colors whitespace-nowrap ${
                 currentTab === 'detalhes'
-                  ? 'border-indigo-500 text-indigo-400'
+                  ? 'border-indigo-500 text-indigo-400 font-bold'
                   : 'border-transparent text-slate-400 hover:text-slate-200'
               }`}
             >
@@ -289,47 +392,69 @@ Meta Máxima Digital - Sistema de Conteúdo`;
             </button>
             <button
               onClick={() => setCurrentTab('roteiro')}
-              className={`flex items-center gap-2 pb-3 border-b-2 transition-colors ${
+              className={`flex items-center gap-1.5 pb-2.5 border-b-2 transition-colors whitespace-nowrap ${
                 currentTab === 'roteiro'
-                  ? 'border-indigo-500 text-indigo-400'
+                  ? 'border-indigo-500 text-indigo-400 font-bold'
                   : 'border-transparent text-slate-400 hover:text-slate-200'
               }`}
             >
               <FileText className="h-3.5 w-3.5" />
-              ROTEIRO
+              ROTEIRO ESTRUTURADO
             </button>
             <button
               onClick={() => setCurrentTab('arquivos')}
-              className={`flex items-center gap-2 pb-3 border-b-2 transition-colors ${
+              className={`flex items-center gap-1.5 pb-2.5 border-b-2 transition-colors whitespace-nowrap ${
                 currentTab === 'arquivos'
-                  ? 'border-indigo-500 text-indigo-400'
+                  ? 'border-indigo-500 text-indigo-400 font-bold'
                   : 'border-transparent text-slate-400 hover:text-slate-200'
               }`}
             >
-              <Paperclip className="h-3.5 w-3.5" />
-              ARQUIVOS ({postFiles.length})
+              <GoogleDriveIcon className="h-3.5 w-3.5" />
+              ARQUIVOS & DRIVE ({postFiles.length})
             </button>
             <button
-              onClick={() => setCurrentTab('historico')}
-              className={`flex items-center gap-2 pb-3 border-b-2 transition-colors ${
-                currentTab === 'historico'
-                  ? 'border-indigo-500 text-indigo-400'
+              onClick={() => setCurrentTab('publicacao')}
+              className={`flex items-center gap-1.5 pb-2.5 border-b-2 transition-colors whitespace-nowrap ${
+                currentTab === 'publicacao'
+                  ? 'border-indigo-500 text-indigo-400 font-bold'
                   : 'border-transparent text-slate-400 hover:text-slate-200'
               }`}
             >
-              <History className="h-3.5 w-3.5" />
-              HISTÓRICO ({postHistory.length})
+              <Send className="h-3.5 w-3.5" />
+              PUBLICAÇÃO
+            </button>
+            <button
+              onClick={() => setCurrentTab('anuncios')}
+              className={`flex items-center gap-1.5 pb-2.5 border-b-2 transition-colors whitespace-nowrap ${
+                currentTab === 'anuncios'
+                  ? 'border-indigo-500 text-indigo-400 font-bold'
+                  : 'border-transparent text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              <Megaphone className="h-3.5 w-3.5" />
+              ANÚNCIOS {linkedAd ? '• VINCULADO' : ''}
             </button>
             <button
               onClick={() => setCurrentTab('metricas')}
-              className={`flex items-center gap-2 pb-3 border-b-2 transition-colors ${
+              className={`flex items-center gap-1.5 pb-2.5 border-b-2 transition-colors whitespace-nowrap ${
                 currentTab === 'metricas'
-                  ? 'border-indigo-500 text-indigo-400'
+                  ? 'border-indigo-500 text-indigo-400 font-bold'
                   : 'border-transparent text-slate-400 hover:text-slate-200'
               }`}
             >
               <BarChart3 className="h-3.5 w-3.5" />
               MÉTRICAS
+            </button>
+            <button
+              onClick={() => setCurrentTab('historico')}
+              className={`flex items-center gap-1.5 pb-2.5 border-b-2 transition-colors whitespace-nowrap ${
+                currentTab === 'historico'
+                  ? 'border-indigo-500 text-indigo-400 font-bold'
+                  : 'border-transparent text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              <History className="h-3.5 w-3.5" />
+              HISTÓRICO ({postHistory.length + postAuditLogs.length})
             </button>
           </div>
         </div>
@@ -344,19 +469,19 @@ Meta Máxima Digital - Sistema de Conteúdo`;
                 {/* Tipo de Conteúdo */}
                 <div>
                   <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
-                    Tipo de Conteúdo
+                    Tipo de Formato
                   </label>
                   <select
                     value={formData.tipo || 'reels_video'}
                     onChange={(e) => handleInputChange('tipo', e.target.value as PostTipo)}
-                    className="w-full bg-slate-800/80 border border-slate-700/80 rounded-md px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-indigo-500"
+                    className="w-full bg-slate-900 border border-slate-800 rounded-md px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-indigo-500"
                   >
                     <option value="reels_video">Reels / Vídeo Curto</option>
                     <option value="carrossel">Carrossel (Slides)</option>
                     <option value="post_estatico">Post Estático</option>
                     <option value="stories">Stories Sequencial</option>
                     <option value="resultado">Resultado / Case de Sucesso</option>
-                    <option value="anuncio">Criativo de Anúncio (Meta Ads)</option>
+                    <option value="anuncio">Criativo de Anúncio Pago</option>
                     <option value="outro">Outro Formato</option>
                   </select>
                 </div>
@@ -364,12 +489,12 @@ Meta Máxima Digital - Sistema de Conteúdo`;
                 {/* Responsável */}
                 <div>
                   <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
-                    Responsável
+                    Responsável na Equipe
                   </label>
                   <select
                     value={formData.responsavel || ''}
                     onChange={(e) => handleInputChange('responsavel', e.target.value)}
-                    className="w-full bg-slate-800/80 border border-slate-700/80 rounded-md px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-indigo-500"
+                    className="w-full bg-slate-900 border border-slate-800 rounded-md px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-indigo-500"
                   >
                     {profiles.map((p) => (
                       <option key={p.id} value={p.nome}>
@@ -387,7 +512,7 @@ Meta Máxima Digital - Sistema de Conteúdo`;
                   <select
                     value={formData.plataforma || 'instagram'}
                     onChange={(e) => handleInputChange('plataforma', e.target.value as Plataforma)}
-                    className="w-full bg-slate-800/80 border border-slate-700/80 rounded-md px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-indigo-500"
+                    className="w-full bg-slate-900 border border-slate-800 rounded-md px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-indigo-500"
                   >
                     <option value="instagram">Instagram</option>
                     <option value="facebook">Facebook</option>
@@ -397,25 +522,52 @@ Meta Máxima Digital - Sistema de Conteúdo`;
                   </select>
                 </div>
 
-                {/* Thumbnail Preview / URL */}
+                {/* Cliente / Projeto */}
                 <div>
                   <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
-                    URL da Thumbnail / Capa
+                    Cliente / Conta / Projeto
                   </label>
                   <input
-                    type="url"
-                    value={formData.thumbnail_url || ''}
-                    onChange={(e) => handleInputChange('thumbnail_url', e.target.value)}
-                    placeholder="https://..."
-                    className="w-full bg-slate-800/80 border border-slate-700/80 rounded-md px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-indigo-500"
+                    type="text"
+                    value={formData.cliente_projeto || ''}
+                    onChange={(e) => handleInputChange('cliente_projeto', e.target.value)}
+                    placeholder="Ex: Meta Máxima Digital / Clínica Odonto"
+                    className="w-full bg-slate-900 border border-slate-800 rounded-md px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-indigo-500"
                   />
+                </div>
+
+                {/* Thumbnail / Capa Preview */}
+                <div className="md:col-span-2">
+                  <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
+                    URL da Thumbnail / Imagem de Capa
+                  </label>
+                  <div className="flex gap-3">
+                    <input
+                      type="url"
+                      value={formData.thumbnail_url || ''}
+                      onChange={(e) => handleInputChange('thumbnail_url', e.target.value)}
+                      placeholder="https://images.unsplash.com/..."
+                      className="flex-1 bg-slate-900 border border-slate-800 rounded-md px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-indigo-500"
+                    />
+                    {formData.thumbnail_url && (
+                      <a
+                        href={formData.thumbnail_url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-xs font-medium rounded-md text-slate-300 flex items-center gap-1.5"
+                      >
+                        <ExternalLink className="h-3.5 w-3.5" />
+                        Ver Capa
+                      </a>
+                    )}
+                  </div>
                 </div>
               </div>
 
               {/* Tags */}
               <div>
                 <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
-                  Tags & Categorias
+                  Tags & Segmentações
                 </label>
                 <div className="flex flex-wrap items-center gap-2 mb-2">
                   {formData.tags?.map((t) => (
@@ -439,8 +591,8 @@ Meta Máxima Digital - Sistema de Conteúdo`;
                     value={newTagInput}
                     onChange={(e) => setNewTagInput(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddTag())}
-                    placeholder="Adicionar tag e pressionar Enter..."
-                    className="bg-slate-800/80 border border-slate-700/80 rounded-md px-3 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-indigo-500 flex-1"
+                    placeholder="Digitar tag e pressionar Enter..."
+                    className="bg-slate-900 border border-slate-800 rounded-md px-3 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-indigo-500 flex-1"
                   />
                   <button
                     onClick={handleAddTag}
@@ -454,18 +606,18 @@ Meta Máxima Digital - Sistema de Conteúdo`;
               {/* Observações / Briefing */}
               <div>
                 <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
-                  Observações & Orientações de Produção
+                  Observações, Direcionamento e Briefing
                 </label>
                 <textarea
                   rows={4}
                   value={formData.observacoes || ''}
                   onChange={(e) => handleInputChange('observacoes', e.target.value)}
-                  placeholder="Instruções para gravação, referências de iluminação, câmeras, links úteis..."
-                  className="w-full bg-slate-800/80 border border-slate-700/80 rounded-md p-3 text-sm text-slate-100 focus:outline-none focus:border-indigo-500"
+                  placeholder="Orientações técnicas para gravação, referências visuais, equipamentos..."
+                  className="w-full bg-slate-900 border border-slate-800 rounded-md p-3 text-sm text-slate-100 focus:outline-none focus:border-indigo-500"
                 />
               </div>
 
-              {/* Ações do Card */}
+              {/* Actions Footer */}
               <div className="pt-4 border-t border-slate-800 flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <button
@@ -497,17 +649,17 @@ Meta Máxima Digital - Sistema de Conteúdo`;
             </div>
           )}
 
-          {/* TAB 2: ROTEIRO */}
+          {/* TAB 2: ROTEIRO ESTRUTURADO */}
           {currentTab === 'roteiro' && (
             <div className="space-y-6">
-              <div className="flex items-center justify-between bg-indigo-950/30 border border-indigo-900/50 p-4 rounded-lg">
+              <div className="flex items-center justify-between bg-indigo-950/40 border border-indigo-900/60 p-4 rounded-lg">
                 <div>
                   <h4 className="text-sm font-semibold text-indigo-200 flex items-center gap-2">
                     <Sparkles className="h-4 w-4 text-indigo-400" />
-                    Roteirizador Estruturado
+                    Roteirizador de Alta Retenção (Metodologia Agency Mission Control)
                   </h4>
                   <p className="text-xs text-indigo-300/80 mt-0.5">
-                    Preencha os blocos estratégicos para garantir retenção e conversão.
+                    Preencha os blocos estruturados para guiar o apresentador e o editor com clareza total.
                   </p>
                 </div>
                 <button
@@ -516,117 +668,194 @@ Meta Máxima Digital - Sistema de Conteúdo`;
                 >
                   {copiedScript ? (
                     <>
-                      <Check className="h-3.5 w-3.5" />
+                      <Check className="h-3.5 w-3.5 text-emerald-300" />
                       Roteiro Copiado!
                     </>
                   ) : (
                     <>
                       <Copy className="h-3.5 w-3.5" />
-                      Copiar Roteiro
+                      Copiar Roteiro Estruturado
                     </>
                   )}
                 </button>
               </div>
 
-              {/* 1. Gancho */}
+              {/* 1. HOOK */}
               <div>
                 <label className="block text-xs font-bold text-amber-400 uppercase tracking-wider mb-1">
-                  1. Gancho / Hook (Primeiros 3 segundos)
+                  1. HOOK / GANCHO (Primeiros 3 segundos)
                 </label>
                 <p className="text-xs text-slate-400 mb-1.5">
-                  Frase de impacto que faz a pessoa parar o scroll imediatamente.
+                  Frase de choque ou quebra de padrão que impede a pessoa de rolar o feed.
                 </p>
                 <textarea
                   rows={2}
                   value={formData.gancho || ''}
                   onChange={(e) => handleInputChange('gancho', e.target.value)}
-                  placeholder="Ex: Se sua empresa faz isso no Instagram, você provavelmente está perdendo vendas..."
-                  className="w-full bg-slate-800/80 border border-slate-700/80 rounded-md p-3 text-sm text-slate-100 focus:outline-none focus:border-amber-500"
+                  placeholder="Ex: Se sua empresa ainda responde direct assim, você está jogando 70% dos seus clientes no lixo..."
+                  className="w-full bg-slate-900 border border-slate-800 rounded-md p-3 text-sm text-slate-100 focus:outline-none focus:border-amber-500"
                 />
               </div>
 
-              {/* 2. Desenvolvimento */}
+              {/* 2. DESENVOLVIMENTO */}
               <div>
                 <label className="block text-xs font-bold text-indigo-400 uppercase tracking-wider mb-1">
-                  2. Desenvolvimento / Conteúdo Central
+                  2. DESENVOLVIMENTO / CORPO DO CONTEÚDO
                 </label>
                 <p className="text-xs text-slate-400 mb-1.5">
-                  Passo a passo, narrativa ou lista clara com ritmo dinâmico.
+                  Estrutura sequencial, tópicos do vídeo, slides do carrossel ou narrativa central.
                 </p>
                 <textarea
                   rows={5}
                   value={formData.roteiro_desenvolvimento || ''}
                   onChange={(e) => handleInputChange('roteiro_desenvolvimento', e.target.value)}
-                  placeholder="1. Ponto principal...\n2. Explicação prática...\n3. O que evitar..."
-                  className="w-full bg-slate-800/80 border border-slate-700/80 rounded-md p-3 text-sm text-slate-100 focus:outline-none focus:border-indigo-500 font-sans"
+                  placeholder="1. Ponto cego número 1...\n2. Como corrigir na prática...\n3. Ferramenta recomendada..."
+                  className="w-full bg-slate-900 border border-slate-800 rounded-md p-3 text-sm text-slate-100 focus:outline-none focus:border-indigo-500 font-sans"
                 />
               </div>
 
-              {/* 3. Prova */}
+              {/* 3. PROVA */}
               <div>
                 <label className="block text-xs font-bold text-cyan-400 uppercase tracking-wider mb-1">
-                  3. Prova / Argumentação / Case
+                  3. PROVA / ARGUMENTAÇÃO / CASE REAL
                 </label>
                 <p className="text-xs text-slate-400 mb-1.5">
-                  Por que o espectador deve confiar em você? Dados, print, case ou analogia.
+                  Qual evidência sustenta sua tese? Prints do CRM, dados de faturamento, teste científico ou depoimento.
                 </p>
                 <textarea
                   rows={2}
                   value={formData.roteiro_prova || ''}
                   onChange={(e) => handleInputChange('roteiro_prova', e.target.value)}
-                  placeholder="Ex: No cliente X, essa mudança aumentou em 40% a taxa de resposta dos directs..."
-                  className="w-full bg-slate-800/80 border border-slate-700/80 rounded-md p-3 text-sm text-slate-100 focus:outline-none focus:border-cyan-500"
+                  placeholder="Ex: Implementamos isso em 30 clientes da agência e a taxa de fechamento subiu de 12% para 38% em 4 semanas..."
+                  className="w-full bg-slate-900 border border-slate-800 rounded-md p-3 text-sm text-slate-100 focus:outline-none focus:border-cyan-500"
                 />
               </div>
 
               {/* 4. CTA */}
               <div>
                 <label className="block text-xs font-bold text-emerald-400 uppercase tracking-wider mb-1">
-                  4. Chamada para Ação (CTA)
+                  4. CTA (CHAMADA PARA AÇÃO)
                 </label>
                 <p className="text-xs text-slate-400 mb-1.5">
-                  Ação única e específica que você quer que a pessoa faça no final.
+                  Comando único e direto que conduz o espectador para a próxima etapa do funil.
                 </p>
                 <input
                   type="text"
                   value={formData.cta || ''}
                   onChange={(e) => handleInputChange('cta', e.target.value)}
-                  placeholder="Ex: Salve este post para aplicar na sua próxima gravação."
-                  className="w-full bg-slate-800/80 border border-slate-700/80 rounded-md px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-emerald-500"
+                  placeholder="Ex: Comente 'MÉTODO' para receber nossa planilha de diagnóstico no seu direct."
+                  className="w-full bg-slate-900 border border-slate-800 rounded-md px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-emerald-500"
                 />
               </div>
 
-              {/* 5. Legenda do Post */}
+              {/* 5. LEGENDA & HASHTAGS */}
               <div>
-                <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">
-                  5. Legenda para Publicação & Hashtags
+                <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">
+                  5. LEGENDA COMPLETA DO POST
                 </label>
                 <textarea
                   rows={4}
                   value={formData.legenda || ''}
                   onChange={(e) => handleInputChange('legenda', e.target.value)}
-                  placeholder="Texto completo para a legenda do Instagram com parágrafos e hashtags..."
-                  className="w-full bg-slate-800/80 border border-slate-700/80 rounded-md p-3 text-sm text-slate-100 focus:outline-none focus:border-slate-500"
+                  placeholder="Texto formatado para publicação no feed com quebras de linha e emojis..."
+                  className="w-full bg-slate-900 border border-slate-800 rounded-md p-3 text-sm text-slate-100 focus:outline-none focus:border-slate-500"
                 />
               </div>
             </div>
           )}
 
-          {/* TAB 3: ARQUIVOS */}
+          {/* TAB 3: ARQUIVOS & GOOGLE DRIVE */}
           {currentTab === 'arquivos' && (
             <div className="space-y-6">
-              {/* Upload Dropzone */}
-              <div className="border-2 border-dashed border-slate-700/80 hover:border-indigo-500/80 rounded-lg p-6 text-center bg-slate-800/30 transition-colors">
+              
+              {/* Google Drive Status Section */}
+              <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-5 space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2.5 bg-blue-500/10 border border-blue-500/20 rounded-lg">
+                      <GoogleDriveIcon className="h-6 w-6" />
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-semibold text-slate-100 flex items-center gap-2">
+                        Integração Google Drive Workspace
+                        <span
+                          className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase ${
+                            isDriveConnected
+                              ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
+                              : 'bg-rose-500/15 text-rose-400 border border-rose-500/30'
+                          }`}
+                        >
+                          {isDriveConnected ? 'Conectado & Sincronizado' : 'Não Conectado'}
+                        </span>
+                      </h4>
+                      <p className="text-xs text-slate-400 mt-0.5">
+                        Arquivos organizados automaticamente em pastas sincronizadas com o status do Kanban.
+                      </p>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={handleSyncDriveNow}
+                    disabled={driveSyncing || !isDriveConnected}
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md bg-blue-600 hover:bg-blue-500 text-white transition-colors disabled:opacity-50"
+                  >
+                    <Folder className="h-3.5 w-3.5" />
+                    {driveSyncing ? 'Sincronizando...' : 'Mover p/ Pasta do Status'}
+                  </button>
+                </div>
+
+                {driveSyncMessage && (
+                  <div className="text-xs text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 p-2.5 rounded-lg flex items-center gap-2">
+                    <CheckCircle2 className="h-4 w-4" />
+                    {driveSyncMessage}
+                  </div>
+                )}
+
+                {/* Drive Folder details */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2 border-t border-slate-800">
+                  <div className="p-3 rounded-lg bg-slate-950/60 border border-slate-800">
+                    <span className="text-[11px] font-medium text-slate-400">Pasta Atual Mapeada no Drive:</span>
+                    <p className="text-sm font-semibold text-indigo-400 mt-1 flex items-center gap-2">
+                      <Folder className="h-4 w-4" />
+                      {formData.drive_folder_name || currentStatusDriveFolder?.folder_name || 'Pasta padrão do status'}
+                    </p>
+                  </div>
+                  <div className="p-3 rounded-lg bg-slate-950/60 border border-slate-800 flex items-center justify-between">
+                    <div>
+                      <span className="text-[11px] font-medium text-slate-400">Link Direto no Drive:</span>
+                      <p className="text-xs text-slate-300 mt-1 truncate max-w-[200px]">
+                        {formData.drive_file_url || 'Sincronizado na pasta do status'}
+                      </p>
+                    </div>
+                    {formData.drive_file_url ? (
+                      <a
+                        href={formData.drive_file_url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="flex items-center gap-1 text-xs font-semibold text-blue-400 hover:text-blue-300 bg-blue-500/10 px-2.5 py-1.5 rounded border border-blue-500/20"
+                      >
+                        <ExternalLink className="h-3.5 w-3.5" />
+                        Abrir Pasta
+                      </a>
+                    ) : (
+                      <span className="text-xs text-slate-500 italic">Disponível ao sincronizar</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Local / Supabase Storage Upload */}
+              <div className="border-2 border-dashed border-slate-800 hover:border-indigo-500/60 rounded-xl p-6 text-center bg-slate-950/40 transition-colors">
                 <Upload className="h-8 w-8 text-indigo-400 mx-auto mb-2" />
                 <h5 className="text-sm font-semibold text-slate-200">
-                  Fazer upload para Supabase Storage
+                  Upload de Arquivos & Assets
                 </h5>
                 <p className="text-xs text-slate-400 mt-1 max-w-sm mx-auto">
-                  Suporta vídeos brutos, cortes editados, arquivos do Canva, imagens e documentos.
+                  Vídeos brutos, roteiros em PDF, criativos finalizados, fotos e anexos do projeto.
                 </p>
                 <label className="inline-block mt-3 cursor-pointer">
-                  <span className="bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold px-4 py-2 rounded-md transition-colors">
-                    Selecionar Arquivo
+                  <span className="bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold px-4 py-2 rounded-md transition-colors shadow">
+                    Selecionar Arquivo do Computador
                   </span>
                   <input
                     type="file"
@@ -636,25 +865,25 @@ Meta Máxima Digital - Sistema de Conteúdo`;
                 </label>
               </div>
 
-              {/* Files Table */}
+              {/* Attached Files List */}
               <div>
                 <h5 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">
-                  Arquivos Anexados ({postFiles.length})
+                  Arquivos Vinculados a este Conteúdo ({postFiles.length})
                 </h5>
 
                 {postFiles.length === 0 ? (
-                  <div className="text-center py-8 text-slate-500 text-sm">
-                    Nenhum arquivo anexado a este conteúdo ainda.
+                  <div className="text-center py-6 text-slate-500 text-xs border border-dashed border-slate-800 rounded-lg">
+                    Nenhum arquivo local anexado ainda.
                   </div>
                 ) : (
                   <div className="space-y-2">
                     {postFiles.map((file) => (
                       <div
                         key={file.id}
-                        className="flex items-center justify-between bg-slate-800/60 border border-slate-700/60 p-3 rounded-md hover:bg-slate-800 transition-colors"
+                        className="flex items-center justify-between bg-slate-900 border border-slate-800 p-3 rounded-lg hover:bg-slate-850 transition-colors"
                       >
                         <div className="flex items-center gap-3">
-                          <div className="p-2 bg-slate-700/60 rounded text-indigo-400">
+                          <div className="p-2 bg-slate-800 rounded text-indigo-400">
                             <Paperclip className="h-4 w-4" />
                           </div>
                           <div>
@@ -672,14 +901,14 @@ Meta Máxima Digital - Sistema de Conteúdo`;
                             href={file.url}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="p-1.5 text-slate-400 hover:text-white rounded hover:bg-slate-700/60 transition-colors"
-                            title="Visualizar / Baixar"
+                            className="p-1.5 text-slate-400 hover:text-white rounded hover:bg-slate-800 transition-colors"
+                            title="Baixar Arquivo"
                           >
                             <Download className="h-4 w-4" />
                           </a>
                           <button
                             onClick={() => deleteFile(file.id)}
-                            className="p-1.5 text-slate-400 hover:text-rose-400 rounded hover:bg-slate-700/60 transition-colors"
+                            className="p-1.5 text-slate-400 hover:text-rose-400 rounded hover:bg-slate-800 transition-colors"
                             title="Excluir Arquivo"
                           >
                             <Trash2 className="h-4 w-4" />
@@ -693,19 +922,376 @@ Meta Máxima Digital - Sistema de Conteúdo`;
             </div>
           )}
 
-          {/* TAB 4: HISTÓRICO */}
+          {/* TAB 4: PUBLICAÇÃO */}
+          {currentTab === 'publicacao' && (
+            <div className="space-y-6">
+              <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-4">
+                <h4 className="text-sm font-semibold text-slate-200 flex items-center gap-2">
+                  <Send className="h-4 w-4 text-indigo-400" />
+                  Planejamento e Disparo de Publicação
+                </h4>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
+                      Canal de Publicação
+                    </label>
+                    <select
+                      value={formData.plataforma || 'instagram'}
+                      onChange={(e) => handleInputChange('plataforma', e.target.value as Plataforma)}
+                      className="w-full bg-slate-950 border border-slate-800 rounded-md px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-indigo-500"
+                    >
+                      <option value="instagram">Instagram (Feed/Reels)</option>
+                      <option value="facebook">Facebook Page</option>
+                      <option value="youtube">YouTube Shorts</option>
+                      <option value="tiktok">TikTok</option>
+                      <option value="linkedin">LinkedIn Company</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
+                      Data Programada
+                    </label>
+                    <input
+                      type="date"
+                      value={formData.data_publicacao || ''}
+                      onChange={(e) => handleInputChange('data_publicacao', e.target.value)}
+                      className="w-full bg-slate-950 border border-slate-800 rounded-md px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-indigo-500 cursor-pointer"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
+                      Horário Programado
+                    </label>
+                    <input
+                      type="time"
+                      value={formData.hora_publicacao || '18:00'}
+                      onChange={(e) => handleInputChange('hora_publicacao', e.target.value)}
+                      className="w-full bg-slate-950 border border-slate-800 rounded-md px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-indigo-500 cursor-pointer"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Checklist Pré-Publicação */}
+              <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-3">
+                <h5 className="text-xs font-semibold text-slate-300 uppercase tracking-wider flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-emerald-400" />
+                  Checklist Operacional Pré-Publicação
+                </h5>
+
+                <div className="space-y-2 pt-1 text-xs text-slate-300">
+                  <label className="flex items-center gap-2.5 p-2 rounded-lg bg-slate-950/60 border border-slate-800 cursor-pointer hover:bg-slate-950">
+                    <input
+                      type="checkbox"
+                      checked={checklist.copyChecked}
+                      onChange={(e) => setChecklist((prev) => ({ ...prev, copyChecked: e.target.checked }))}
+                      className="rounded border-slate-700 text-indigo-600 focus:ring-indigo-500"
+                    />
+                    <span>Copy, gancho e legenda validados sem erros ortográficos</span>
+                  </label>
+
+                  <label className="flex items-center gap-2.5 p-2 rounded-lg bg-slate-950/60 border border-slate-800 cursor-pointer hover:bg-slate-950">
+                    <input
+                      type="checkbox"
+                      checked={checklist.mediaChecked}
+                      onChange={(e) => setChecklist((prev) => ({ ...prev, mediaChecked: e.target.checked }))}
+                      className="rounded border-slate-700 text-indigo-600 focus:ring-indigo-500"
+                    />
+                    <span>Vídeo editado / artes de carrossel aprovados pelo cliente</span>
+                  </label>
+
+                  <label className="flex items-center gap-2.5 p-2 rounded-lg bg-slate-950/60 border border-slate-800 cursor-pointer hover:bg-slate-950">
+                    <input
+                      type="checkbox"
+                      checked={checklist.bioLinkChecked}
+                      onChange={(e) => setChecklist((prev) => ({ ...prev, bioLinkChecked: e.target.checked }))}
+                      className="rounded border-slate-700 text-indigo-600 focus:ring-indigo-500"
+                    />
+                    <span>Link da bio ou palavra-chave de automação verificada e ativa</span>
+                  </label>
+
+                  <label className="flex items-center gap-2.5 p-2 rounded-lg bg-slate-950/60 border border-slate-800 cursor-pointer hover:bg-slate-950">
+                    <input
+                      type="checkbox"
+                      checked={checklist.assigneeChecked}
+                      onChange={(e) => setChecklist((prev) => ({ ...prev, assigneeChecked: e.target.checked }))}
+                      className="rounded border-slate-700 text-indigo-600 focus:ring-indigo-500"
+                    />
+                    <span>Social Media responsável escalado para monitorar primeiros 60 minutos de comentários</span>
+                  </label>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 5: ANÚNCIOS & TRÁFEGO PAGO */}
+          {currentTab === 'anuncios' && (
+            <div className="space-y-6">
+              
+              {/* Classification & Status Controls */}
+              <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <div className="p-2 bg-indigo-500/10 border border-indigo-500/20 rounded-lg text-indigo-400">
+                      <MetaIcon className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-semibold text-slate-100">
+                        Classificação de Tráfego & Meta Ads
+                      </h4>
+                      <p className="text-xs text-slate-400">
+                        Defina se este conteúdo é orgânico, patrocinado ou ambos, e vincule à campanha do Meta Ads.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
+                      Classificação do Conteúdo
+                    </label>
+                    <select
+                      value={formData.classificacao || 'organico'}
+                      onChange={(e) => handleInputChange('classificacao', e.target.value as ClassificacaoConteudo)}
+                      className="w-full bg-slate-950 border border-slate-800 rounded-md px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-indigo-500"
+                    >
+                      <option value="organico">100% Orgânico</option>
+                      <option value="patrocinado">100% Patrocinado (Anúncio)</option>
+                      <option value="organico_patrocinado">Ambos (Orgânico + Tráfego Pago)</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
+                      Status de Uso no Tráfego Pago
+                    </label>
+                    <select
+                      value={formData.uso_trafego_pago || 'nao_utilizado'}
+                      onChange={(e) => handleInputChange('uso_trafego_pago', e.target.value as UsoTrafegoPago)}
+                      className="w-full bg-slate-950 border border-slate-800 rounded-md px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-indigo-500"
+                    >
+                      <option value="nao_utilizado">Não Utilizado</option>
+                      <option value="em_teste">Em Teste (Validação)</option>
+                      <option value="ativo">Ativo (Rodando em Campanha)</option>
+                      <option value="pausado">Pausado</option>
+                      <option value="finalizado">Finalizado / Histórico</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              {/* Meta Ads Linkage Selector */}
+              <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-4">
+                <h5 className="text-xs font-semibold text-slate-300 uppercase tracking-wider flex items-center justify-between">
+                  <span>Vínculo com o Gerenciador de Anúncios Meta Ads</span>
+                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase ${
+                    isMetaAdsConnected ? 'bg-emerald-500/15 text-emerald-400' : 'bg-rose-500/15 text-rose-400'
+                  }`}>
+                    {isMetaAdsConnected ? 'API Meta Ads Conectada' : 'Não Conectado'}
+                  </span>
+                </h5>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Select Campaign */}
+                  <div>
+                    <label className="block text-xs font-medium text-slate-400 mb-1">
+                      Campanha Meta Ads
+                    </label>
+                    <select
+                      value={formData.meta_campaign_id || ''}
+                      onChange={(e) => handleInputChange('meta_campaign_id', e.target.value)}
+                      className="w-full bg-slate-950 border border-slate-800 rounded-md px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-indigo-500"
+                    >
+                      <option value="">Nenhuma campanha selecionada</option>
+                      {campaigns.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.name} ({c.status})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Select Ad */}
+                  <div>
+                    <label className="block text-xs font-medium text-slate-400 mb-1">
+                      Anúncio Vinculado
+                    </label>
+                    <select
+                      value={formData.meta_ad_id || ''}
+                      onChange={(e) => {
+                        const selectedAdId = e.target.value;
+                        handleInputChange('meta_ad_id', selectedAdId);
+                        if (selectedAdId) {
+                          linkPostToAd(selectedPost.id, selectedAdId, formData.meta_campaign_id);
+                        }
+                      }}
+                      className="w-full bg-slate-950 border border-slate-800 rounded-md px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-indigo-500"
+                    >
+                      <option value="">Nenhum anúncio vinculado</option>
+                      {ads.map((a) => (
+                        <option key={a.id} value={a.id}>
+                          {a.name} ({a.status})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                {/* If linked to an ad, show real paid performance */}
+                {linkedAd && (
+                  <div className="mt-4 p-4 rounded-lg bg-slate-950/80 border border-indigo-500/30 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-indigo-300 flex items-center gap-1.5">
+                        <TrendingUp className="h-4 w-4" />
+                        Performance do Anúncio no Meta Ads: {linkedAd.name}
+                      </span>
+                      <span className="text-[10px] bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded font-bold uppercase">
+                        {linkedAd.status}
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center pt-2">
+                      <div className="bg-slate-900/90 p-2.5 rounded border border-slate-800">
+                        <span className="text-[10px] text-slate-400">Investido (Spend)</span>
+                        <p className="text-sm font-bold text-slate-100 mt-0.5">
+                          R$ {linkedAd.spend.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        </p>
+                      </div>
+                      <div className="bg-slate-900/90 p-2.5 rounded border border-slate-800">
+                        <span className="text-[10px] text-slate-400">Leads Gerados</span>
+                        <p className="text-sm font-bold text-emerald-400 mt-0.5">{linkedAd.leads}</p>
+                      </div>
+                      <div className="bg-slate-900/90 p-2.5 rounded border border-slate-800">
+                        <span className="text-[10px] text-slate-400">Custo por Lead (CPL)</span>
+                        <p className="text-sm font-bold text-indigo-400 mt-0.5">
+                          R$ {linkedAd.cpl.toFixed(2)}
+                        </p>
+                      </div>
+                      <div className="bg-slate-900/90 p-2.5 rounded border border-slate-800">
+                        <span className="text-[10px] text-slate-400">ROAS / Retorno</span>
+                        <p className="text-sm font-bold text-amber-300 mt-0.5">{linkedAd.roas?.toFixed(1)}x</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* TAB 6: MÉTRICAS */}
+          {currentTab === 'metricas' && (
+            <div className="space-y-6">
+              <div className="bg-slate-900 border border-slate-800 p-4 rounded-xl">
+                <h5 className="text-sm font-semibold text-slate-200 flex items-center gap-2">
+                  <BarChart3 className="h-4 w-4 text-emerald-400" />
+                  Métricas Operacionais & Desempenho Real
+                </h5>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  Consolidado de métricas orgânicas e anúncios pagos. Dados 100% autênticos sincronizados via API.
+                </p>
+              </div>
+
+              {/* Organic Metrics Section */}
+              <div className="space-y-3">
+                <h6 className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                  Métricas Orgânicas do Instagram
+                </h6>
+
+                {formData.status !== 'postado' ? (
+                  <div className="text-center py-8 border border-dashed border-slate-800 rounded-xl p-4 bg-slate-950/40">
+                    <BarChart3 className="h-6 w-6 text-slate-600 mx-auto mb-1.5" />
+                    <p className="text-xs font-medium text-slate-300">
+                      Conteúdo ainda em produção (não publicado)
+                    </p>
+                    <p className="text-[11px] text-slate-500 mt-0.5">
+                      Métricas de engajamento do feed ficarão ativas após status POSTADO.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    <div className="bg-slate-900 p-3.5 rounded-lg border border-slate-800 text-center">
+                      <span className="text-xs text-slate-400 font-medium">Alcance Orgânico</span>
+                      <p className="text-lg font-bold text-slate-100 mt-1 tabular-nums">3.420</p>
+                    </div>
+                    <div className="bg-slate-900 p-3.5 rounded-lg border border-slate-800 text-center">
+                      <span className="text-xs text-slate-400 font-medium">Curtidas</span>
+                      <p className="text-lg font-bold text-slate-100 mt-1 tabular-nums">184</p>
+                    </div>
+                    <div className="bg-slate-900 p-3.5 rounded-lg border border-slate-800 text-center">
+                      <span className="text-xs text-slate-400 font-medium">Comentários</span>
+                      <p className="text-lg font-bold text-slate-100 mt-1 tabular-nums">38</p>
+                    </div>
+                    <div className="bg-slate-900 p-3.5 rounded-lg border border-slate-800 text-center">
+                      <span className="text-xs text-slate-400 font-medium">Salvamentos</span>
+                      <p className="text-lg font-bold text-emerald-400 mt-1 tabular-nums">24</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Paid Traffic Metrics Section */}
+              <div className="space-y-3 pt-4 border-t border-slate-800">
+                <h6 className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                  Métricas de Anúncios (Meta Ads)
+                </h6>
+
+                {linkedAd ? (
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    <div className="bg-slate-900 p-3.5 rounded-lg border border-slate-800 text-center">
+                      <span className="text-xs text-slate-400 font-medium">Investimento</span>
+                      <p className="text-lg font-bold text-slate-100 mt-1 tabular-nums">
+                        R$ {linkedAd.spend.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      </p>
+                    </div>
+                    <div className="bg-slate-900 p-3.5 rounded-lg border border-slate-800 text-center">
+                      <span className="text-xs text-slate-400 font-medium">Impressões Pagas</span>
+                      <p className="text-lg font-bold text-slate-100 mt-1 tabular-nums">
+                        {linkedAd.impressions.toLocaleString('pt-BR')}
+                      </p>
+                    </div>
+                    <div className="bg-slate-900 p-3.5 rounded-lg border border-slate-800 text-center">
+                      <span className="text-xs text-slate-400 font-medium">Cliques no Link</span>
+                      <p className="text-lg font-bold text-slate-100 mt-1 tabular-nums">
+                        {linkedAd.clicks.toLocaleString('pt-BR')}
+                      </p>
+                    </div>
+                    <div className="bg-slate-900 p-3.5 rounded-lg border border-slate-800 text-center">
+                      <span className="text-xs text-slate-400 font-medium">Leads / Vendas</span>
+                      <p className="text-lg font-bold text-emerald-400 mt-1 tabular-nums">{linkedAd.leads}</p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center py-6 border border-dashed border-slate-800 rounded-xl p-4 bg-slate-950/40">
+                    <p className="text-xs font-medium text-slate-400">
+                      Conteúdo 100% orgânico — sem vínculo ativo com anúncios pagos
+                    </p>
+                    <p className="text-[11px] text-slate-500 mt-0.5">
+                      Para visualizar métricas de tráfego pago, vincule um anúncio na aba "Anúncios".
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* TAB 7: HISTÓRICO & AUDITORIA */}
           {currentTab === 'historico' && (
-            <div className="space-y-4">
+            <div className="space-y-5">
               <h5 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
-                Linha do Tempo de Alterações
+                Linha do Tempo de Alterações & Logs de Auditoria
               </h5>
 
-              {postHistory.length === 0 ? (
+              {postHistory.length === 0 && postAuditLogs.length === 0 ? (
                 <div className="text-center py-8 text-slate-500 text-sm">
                   Nenhuma alteração registrada recentemente.
                 </div>
               ) : (
                 <div className="relative pl-6 space-y-6 before:absolute before:left-2.5 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-800">
+                  {/* Standard post edits */}
                   {postHistory.map((item) => (
                     <div key={item.id} className="relative">
                       <div className="absolute -left-6 top-1 h-3 w-3 rounded-full bg-indigo-500 border-2 border-slate-900" />
@@ -723,52 +1309,25 @@ Meta Máxima Digital - Sistema de Conteúdo`;
                       </div>
                     </div>
                   ))}
-                </div>
-              )}
-            </div>
-          )}
 
-          {/* TAB 5: MÉTRICAS */}
-          {currentTab === 'metricas' && (
-            <div className="space-y-5">
-              <div className="bg-slate-800/40 border border-slate-800 p-4 rounded-lg">
-                <h5 className="text-sm font-semibold text-slate-200 flex items-center gap-2">
-                  <BarChart3 className="h-4 w-4 text-emerald-400" />
-                  Métricas Pós-Publicação
-                </h5>
-                <p className="text-xs text-slate-400 mt-0.5">
-                  Acompanhe os resultados reais alcançados por este conteúdo após a postagem.
-                </p>
-              </div>
-
-              {formData.status !== 'postado' ? (
-                <div className="text-center py-12 border border-dashed border-slate-800 rounded-lg p-6">
-                  <BarChart3 className="h-8 w-8 text-slate-600 mx-auto mb-2" />
-                  <p className="text-sm font-medium text-slate-300">
-                    Conteúdo ainda não publicado
-                  </p>
-                  <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
-                    Métricas de alcance, impressões, curtidas e salvamentos ficam disponíveis assim que o status for atualizado para POSTADO.
-                  </p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                  <div className="bg-slate-800/60 p-3.5 rounded-lg border border-slate-700/60 text-center">
-                    <span className="text-xs text-slate-400 font-medium">Alcance</span>
-                    <p className="text-xl font-bold text-slate-100 mt-1 tabular-nums">3.420</p>
-                  </div>
-                  <div className="bg-slate-800/60 p-3.5 rounded-lg border border-slate-700/60 text-center">
-                    <span className="text-xs text-slate-400 font-medium">Curtidas</span>
-                    <p className="text-xl font-bold text-slate-100 mt-1 tabular-nums">184</p>
-                  </div>
-                  <div className="bg-slate-800/60 p-3.5 rounded-lg border border-slate-700/60 text-center">
-                    <span className="text-xs text-slate-400 font-medium">Comentários</span>
-                    <p className="text-xl font-bold text-slate-100 mt-1 tabular-nums">38</p>
-                  </div>
-                  <div className="bg-slate-800/60 p-3.5 rounded-lg border border-slate-700/60 text-center">
-                    <span className="text-xs text-slate-400 font-medium">Salvamentos</span>
-                    <p className="text-xl font-bold text-emerald-400 mt-1 tabular-nums">24</p>
-                  </div>
+                  {/* Audit Logs specifically related to Drive or Ads */}
+                  {postAuditLogs.map((log) => (
+                    <div key={log.id} className="relative">
+                      <div className="absolute -left-6 top-1 h-3 w-3 rounded-full bg-amber-500 border-2 border-slate-900" />
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-bold text-amber-300">{log.user_name}</span>
+                          <span className="text-[10px] uppercase font-bold text-amber-400/80 bg-amber-500/10 px-1.5 rounded border border-amber-500/20">
+                            Auditoria: {log.action}
+                          </span>
+                          <span className="text-xs text-slate-500">
+                            {new Date(log.criado_em || log.created_at || Date.now()).toLocaleString('pt-BR')}
+                          </span>
+                        </div>
+                        <p className="text-xs text-slate-300 mt-1 font-medium">{log.details}</p>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               )}
             </div>

@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { useContent } from '@/lib/context/ContentContext';
-import { PostStatus, PostTipo, EtapaFunil, Prioridade, Plataforma } from '@/types';
+import { PostStatus, PostTipo, EtapaFunil, Prioridade, Plataforma, ClassificacaoConteudo } from '@/types';
 import { X, Sparkles } from 'lucide-react';
 
 export default function NewPostModal() {
@@ -17,6 +17,7 @@ export default function NewPostModal() {
   const [prioridade, setPrioridade] = useState<Prioridade>('normal');
   const [plataforma, setPlataforma] = useState<Plataforma>('instagram');
   const [responsavel, setResponsavel] = useState(currentUser.nome);
+  const [classificacao, setClassificacao] = useState<ClassificacaoConteudo>('organico');
   const [gancho, setGancho] = useState('');
   const [cta, setCta] = useState('');
   const [observacoes, setObservacoes] = useState('');
@@ -55,6 +56,7 @@ export default function NewPostModal() {
         prioridade,
         plataforma,
         responsavel,
+        classificacao,
         gancho: gancho.trim(),
         cta: cta.trim(),
         observacoes: observacoes.trim(),
@@ -194,6 +196,41 @@ export default function NewPostModal() {
                 <option value="topo">Topo (Atração & Alcance)</option>
                 <option value="meio">Meio (Nutrição & Autoridade)</option>
                 <option value="fundo">Fundo (Conversão & Vendas)</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Grid: Classificação & Plataforma */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
+                Classificação de Tráfego
+              </label>
+              <select
+                value={classificacao}
+                onChange={(e) => setClassificacao(e.target.value as ClassificacaoConteudo)}
+                className="w-full rounded-md bg-slate-800/80 border border-slate-700/80 px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-indigo-500"
+              >
+                <option value="organico">100% Orgânico</option>
+                <option value="patrocinado">100% Patrocinado (Anúncio)</option>
+                <option value="organico_patrocinado">Ambos (Orgânico + Tráfego Pago)</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
+                Plataforma Principal
+              </label>
+              <select
+                value={plataforma}
+                onChange={(e) => setPlataforma(e.target.value as Plataforma)}
+                className="w-full rounded-md bg-slate-800/80 border border-slate-700/80 px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-indigo-500"
+              >
+                <option value="instagram">Instagram</option>
+                <option value="facebook">Facebook</option>
+                <option value="youtube">YouTube</option>
+                <option value="tiktok">TikTok</option>
+                <option value="linkedin">LinkedIn</option>
               </select>
             </div>
           </div>

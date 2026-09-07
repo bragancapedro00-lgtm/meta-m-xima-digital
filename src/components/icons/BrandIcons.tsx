@@ -45,3 +45,17 @@ export function MetaIcon({ className = 'h-4 w-4' }: { className?: string }) {
     </svg>
   );
 }
+
+export function GoogleDriveIcon({ className = 'h-4 w-4' }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 87.3 78" fill="none">
+      <path d="m6.6 66.85 3.85 6.65c.8 1.4 1.95 2.5 3.3 3.3l13.75-23.8H0c0 1.55.4 3.1 1.2 4.5z" fill="#0066DA" />
+      <path d="M43.65 25 29.9 1.2c-1.35.8-2.5 1.9-3.3 3.3l-25.4 44C.4 50 0 51.55 0 53.1h27.45z" fill="#00AC47" />
+      <path d="M73.55 76.8c1.35-.8 2.5-1.9 3.3-3.3l1.6-2.75 7.65-13.25c.8-1.4 1.2-2.95 1.2-4.5H60L73.55 76.8z" fill="#EA4335" />
+      <path d="M43.65 25 57.4 1.2C56.05.4 54.5 0 52.9 0H34.4c-1.6 0-3.15.4-4.5 1.2z" fill="#00832D" />
+      <path d="M59.9 53.1H87.3c0-1.55-.4-3.1-1.2-4.5l-25.4-44c-.8-1.4-1.95-2.5-3.3-3.3L43.65 25z" fill="#FFBA00" />
+      <path d="m73.55 76.8-13.75-23.7H27.45l13.75 23.7c1.35.8 2.9 1.2 4.5 1.2h23.35c1.6 0 3.15-.4 4.5-1.2z" fill="#2684FC" />
+    </svg>
+  );
+}
+

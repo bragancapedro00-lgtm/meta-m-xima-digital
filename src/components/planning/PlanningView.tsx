@@ -188,6 +188,20 @@ export default function PlanningView() {
                     </div>
                   )}
 
+                  {/* Objetivo & Público */}
+                  {idea.objetivo && (
+                    <div className="text-[11px] text-indigo-300 font-medium mb-1.5 flex items-center gap-1.5">
+                      <span className="text-slate-500 font-bold uppercase text-[10px]">Objetivo:</span>
+                      {idea.objetivo}
+                    </div>
+                  )}
+                  {idea.publico && (
+                    <div className="text-[11px] text-cyan-300 font-medium mb-2 flex items-center gap-1.5">
+                      <span className="text-slate-500 font-bold uppercase text-[10px]">Público:</span>
+                      {idea.publico}
+                    </div>
+                  )}
+
                   {/* CTA if present */}
                   {idea.cta && (
                     <div className="text-[11px] text-emerald-400 font-medium mb-3 flex items-center gap-1.5">

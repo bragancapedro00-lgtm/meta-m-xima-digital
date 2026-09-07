@@ -29,20 +29,65 @@ import {
   LogOut,
   UserCog,
   ShieldAlert,
+  Megaphone,
+  Sparkles,
+  Radio,
+  BarChart3,
+  History,
 } from 'lucide-react';
-import { InstagramIcon } from '@/components/icons/BrandIcons';
+import { InstagramIcon, FacebookIcon } from '@/components/icons/BrandIcons';
 
-const NAV_ITEMS = [
-  { name: 'Dashboard', href: '/', icon: LayoutDashboard },
-  { name: 'Kanban', href: '/kanban', icon: KanbanSquare },
-  { name: 'Calendário', href: '/calendario', icon: Calendar },
-  { name: 'Planejamento', href: '/planejamento', icon: Lightbulb },
-  { name: 'Conteúdos', href: '/conteudos', icon: ListOrdered },
-  { name: 'Instagram', href: '/instagram', icon: InstagramIcon },
-  { name: 'Google Analytics', href: '/analytics', icon: TrendingUp },
-  { name: 'Relatórios', href: '/relatorios', icon: FileSpreadsheet },
-  { name: 'Arquivos', href: '/arquivos', icon: FolderArchive },
-  { name: 'Configurações', href: '/configuracoes', icon: Settings },
+interface NavGroup {
+  label: string;
+  items: {
+    name: string;
+    href: string;
+    icon: React.ComponentType<{ className?: string }>;
+  }[];
+}
+
+const NAV_GROUPS: NavGroup[] = [
+  {
+    label: 'VISÃO GERAL',
+    items: [
+      { name: 'Dashboard', href: '/', icon: LayoutDashboard },
+    ],
+  },
+  {
+    label: 'CONTEÚDO & OPERAÇÃO',
+    items: [
+      { name: 'Kanban de Produção', href: '/kanban', icon: KanbanSquare },
+      { name: 'Calendário Editorial', href: '/calendario', icon: Calendar },
+      { name: 'Todos os Conteúdos', href: '/conteudos', icon: ListOrdered },
+      { name: 'Banco de Ideias', href: '/planejamento', icon: Lightbulb },
+      { name: 'Arquivos & Drive', href: '/arquivos', icon: FolderArchive },
+    ],
+  },
+  {
+    label: 'TRÁFEGO PAGO & META ADS',
+    items: [
+      { name: 'Meta Ads Manager', href: '/marketing/meta-ads', icon: Megaphone },
+      { name: 'Conteúdos Patrocinados', href: '/marketing/patrocinados', icon: Sparkles },
+      { name: 'Meta Pixel & Sinais', href: '/marketing/pixel', icon: Radio },
+      { name: 'Performance de Criativos', href: '/marketing/performance', icon: BarChart3 },
+      { name: 'Relatórios de Impacto', href: '/relatorios', icon: FileSpreadsheet },
+    ],
+  },
+  {
+    label: 'CANAIS & ANALYTICS',
+    items: [
+      { name: 'Instagram Insights', href: '/instagram', icon: InstagramIcon },
+      { name: 'Facebook Page', href: '/analytics/facebook', icon: FacebookIcon },
+      { name: 'Google Analytics 4', href: '/analytics', icon: TrendingUp },
+    ],
+  },
+  {
+    label: 'GOVERNANÇA',
+    items: [
+      { name: 'Histórico & Auditoria', href: '/historico', icon: History },
+      { name: 'Configurações', href: '/configuracoes', icon: Settings },
+    ],
+  },
 ];
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
@@ -145,40 +190,47 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         </div>
 
         {/* Navigation Links */}
-        <nav className="flex-1 overflow-y-auto px-3 py-2 space-y-0.5">
-          {NAV_ITEMS.map((item) => {
-            const Icon = item.icon;
-            const isActive = pathname === item.href;
+        <nav className="flex-1 overflow-y-auto px-3 py-2 space-y-4">
+          {NAV_GROUPS.map((group) => (
+            <div key={group.label} className="space-y-0.5">
+              <div className="px-3 py-1 text-[10px] font-bold tracking-wider text-slate-500 uppercase">
+                {group.label}
+              </div>
+              {group.items.map((item) => {
+                const Icon = item.icon;
+                const isActive = pathname === item.href;
 
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={`group flex items-center justify-between rounded-md px-3 py-2 text-xs font-medium transition-all ${
-                  isActive
-                    ? 'bg-indigo-600/15 text-indigo-400 border border-indigo-500/25 font-semibold'
-                    : 'text-slate-400 hover:bg-slate-900 hover:text-slate-200'
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <Icon
-                    className={`h-4 w-4 transition-colors ${
-                      isActive ? 'text-indigo-400' : 'text-slate-400 group-hover:text-slate-200'
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={`group flex items-center justify-between rounded-md px-3 py-1.5 text-xs font-medium transition-all ${
+                      isActive
+                        ? 'bg-indigo-600/15 text-indigo-400 border border-indigo-500/25 font-semibold'
+                        : 'text-slate-400 hover:bg-slate-900 hover:text-slate-200'
                     }`}
-                  />
-                  <span>{item.name}</span>
-                </div>
+                  >
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <Icon
+                        className={`h-4 w-4 shrink-0 transition-colors ${
+                          isActive ? 'text-indigo-400' : 'text-slate-400 group-hover:text-slate-200'
+                        }`}
+                      />
+                      <span className="truncate">{item.name}</span>
+                    </div>
 
-                {/* Overdue alert pill next to Kanban/Dashboard */}
-                {item.href === '/kanban' && overdueCount > 0 && (
-                  <span className="flex items-center gap-1 rounded-full bg-rose-500/20 border border-rose-500/30 px-1.5 py-0.5 text-[10px] font-bold text-rose-400">
-                    <AlertCircle className="h-3 w-3" />
-                    {overdueCount}
-                  </span>
-                )}
-              </Link>
-            );
-          })}
+                    {/* Overdue alert pill next to Kanban */}
+                    {item.href === '/kanban' && overdueCount > 0 && (
+                      <span className="flex items-center gap-1 rounded-full bg-rose-500/20 border border-rose-500/30 px-1.5 py-0.5 text-[10px] font-bold text-rose-400">
+                        <AlertCircle className="h-3 w-3" />
+                        {overdueCount}
+                      </span>
+                    )}
+                  </Link>
+                );
+              })}
+            </div>
+          ))}
         </nav>
 
         {/* Supabase status indicator */}
@@ -307,33 +359,40 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         {/* Mobile Collapsible Full Navigation Drawer */}
         {mobileMenuOpen && (
           <div className="lg:hidden fixed inset-x-0 top-[53px] bottom-14 z-40 bg-slate-950/95 backdrop-blur-md p-4 overflow-y-auto border-b border-slate-800">
-            <nav className="space-y-1">
-              {NAV_ITEMS.map((item) => {
-                const Icon = item.icon;
-                const isActive = pathname === item.href;
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    onClick={() => setMobileMenuOpen(false)}
-                    className={`flex items-center justify-between rounded-lg px-3 py-2.5 text-sm font-medium ${
-                      isActive
-                        ? 'bg-indigo-600/20 text-indigo-400 border border-indigo-500/30'
-                        : 'text-slate-300 hover:bg-slate-900'
-                    }`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <Icon className="h-4 w-4" />
-                      <span>{item.name}</span>
-                    </div>
-                    {item.href === '/kanban' && overdueCount > 0 && (
-                      <span className="text-xs font-bold text-rose-400 bg-rose-500/20 px-2 py-0.5 rounded-full">
-                        {overdueCount} atrasados
-                      </span>
-                    )}
-                  </Link>
-                );
-              })}
+            <nav className="space-y-4">
+              {NAV_GROUPS.map((group) => (
+                <div key={group.label} className="space-y-1">
+                  <div className="px-3 py-1 text-[10px] font-bold tracking-wider text-slate-500 uppercase">
+                    {group.label}
+                  </div>
+                  {group.items.map((item) => {
+                    const Icon = item.icon;
+                    const isActive = pathname === item.href;
+                    return (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        onClick={() => setMobileMenuOpen(false)}
+                        className={`flex items-center justify-between rounded-lg px-3 py-2 text-sm font-medium ${
+                          isActive
+                            ? 'bg-indigo-600/20 text-indigo-400 border border-indigo-500/30'
+                            : 'text-slate-300 hover:bg-slate-900'
+                        }`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <Icon className="h-4 w-4" />
+                          <span>{item.name}</span>
+                        </div>
+                        {item.href === '/kanban' && overdueCount > 0 && (
+                          <span className="text-xs font-bold text-rose-400 bg-rose-500/20 px-2 py-0.5 rounded-full">
+                            {overdueCount} atrasados
+                          </span>
+                        )}
+                      </Link>
+                    );
+                  })}
+                </div>
+              ))}
 
               <div className="pt-3 mt-3 border-t border-slate-800 space-y-3">
                 {/* Current User in Mobile Drawer */}

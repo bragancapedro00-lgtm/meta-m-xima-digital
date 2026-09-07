@@ -18,6 +18,13 @@ import {
   IntegracaoConfig,
   ProvedorIntegracao,
   DEFAULT_ROLE_PERMISSIONS,
+  GoogleDriveFolderMapping,
+  MetaCampaign,
+  MetaAdSet,
+  MetaAd,
+  MetaCreative,
+  MetaPixelConfig,
+  AuditLog,
 } from '@/types';
 import {
   INITIAL_POSTS,
@@ -26,8 +33,17 @@ import {
   INITIAL_FILES,
   INITIAL_PROFILES,
   INITIAL_INTEGRATIONS,
+  INITIAL_DRIVE_FOLDERS,
+  INITIAL_CAMPAIGNS,
+  INITIAL_ADSETS,
+  INITIAL_ADS,
+  INITIAL_CREATIVES,
+  INITIAL_PIXEL_CONFIG,
+  INITIAL_AUDIT_LOGS,
 } from '@/lib/mockData';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
+
+export type PostModalTab = 'detalhes' | 'roteiro' | 'arquivos' | 'publicacao' | 'anuncios' | 'metricas' | 'historico';
 
 interface ContentContextType {
   posts: Post[];
@@ -49,8 +65,8 @@ interface ContentContextType {
   filteredPosts: Post[];
   selectedPost: Post | null;
   isModalOpen: boolean;
-  modalTab: 'detalhes' | 'roteiro' | 'arquivos' | 'historico' | 'metricas';
-  openPostModal: (post: Post, tab?: 'detalhes' | 'roteiro' | 'arquivos' | 'historico' | 'metricas') => void;
+  modalTab: PostModalTab;
+  openPostModal: (post: Post, tab?: PostModalTab) => void;
   closePostModal: () => void;
   isNewPostModalOpen: boolean;
   openNewPostModal: (initialStatus?: PostStatus, initialDate?: string) => void;
@@ -78,6 +94,25 @@ interface ContentContextType {
   isAuthenticated: boolean;
   loginWithEmail: (email: string, senha?: string) => Promise<{ success: boolean; error?: string; user?: Perfil }>;
   logout: () => void;
+
+  // New Operational Entities & Methods
+  driveFolders: GoogleDriveFolderMapping[];
+  setDriveFolders: React.Dispatch<React.SetStateAction<GoogleDriveFolderMapping[]>>;
+  campaigns: MetaCampaign[];
+  adSets: MetaAdSet[];
+  ads: MetaAd[];
+  creatives: MetaCreative[];
+  pixelConfig: MetaPixelConfig;
+  auditLogs: AuditLog[];
+  addAuditLog: (
+    action: string,
+    entityType: 'POST' | 'IDEA' | 'CAMPAIGN' | 'AD' | 'FILE' | 'INTEGRATION',
+    entityId?: string,
+    entityTitle?: string,
+    details?: string
+  ) => Promise<void>;
+  moveGoogleDriveFile: (postId: string, newStatus: PostStatus) => Promise<{ success: boolean; folderName: string }>;
+  linkPostToAd: (postId: string, adId: string, campaignId?: string) => Promise<void>;
 }
 
 const DEFAULT_FILTERS: FilterState = {
@@ -102,6 +137,11 @@ const LOCAL_STORAGE_KEY_PROFILES = 'mmd_crm_profiles_v1';
 const LOCAL_STORAGE_KEY_INTEGRATIONS = 'mmd_crm_integrations_v1';
 const LOCAL_STORAGE_KEY_SESSION = 'mmd_crm_session_v1';
 const LOCAL_STORAGE_KEY_LOGGED_OUT = 'mmd_crm_logged_out_v1';
+const LOCAL_STORAGE_KEY_DRIVE_FOLDERS = 'mmd_crm_drive_folders_v1';
+const LOCAL_STORAGE_KEY_CAMPAIGNS = 'mmd_crm_campaigns_v1';
+const LOCAL_STORAGE_KEY_ADS = 'mmd_crm_ads_v1';
+const LOCAL_STORAGE_KEY_PIXEL = 'mmd_crm_pixel_v1';
+const LOCAL_STORAGE_KEY_AUDIT_LOGS = 'mmd_crm_audit_logs_v1';
 
 export function ContentProvider({ children }: { children: ReactNode }) {
   const [posts, setPosts] = useState<Post[]>(INITIAL_POSTS);
@@ -114,9 +154,18 @@ export function ContentProvider({ children }: { children: ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(true);
   const [filters, setFilters] = useState<FilterState>(DEFAULT_FILTERS);
 
+  // Operational State
+  const [driveFolders, setDriveFolders] = useState<GoogleDriveFolderMapping[]>(INITIAL_DRIVE_FOLDERS);
+  const [campaigns, setCampaigns] = useState<MetaCampaign[]>(INITIAL_CAMPAIGNS);
+  const [adSets, setAdSets] = useState<MetaAdSet[]>(INITIAL_ADSETS);
+  const [ads, setAds] = useState<MetaAd[]>(INITIAL_ADS);
+  const [creatives, setCreatives] = useState<MetaCreative[]>(INITIAL_CREATIVES);
+  const [pixelConfig, setPixelConfig] = useState<MetaPixelConfig>(INITIAL_PIXEL_CONFIG);
+  const [auditLogs, setAuditLogs] = useState<AuditLog[]>(INITIAL_AUDIT_LOGS);
+
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [modalTab, setModalTab] = useState<'detalhes' | 'roteiro' | 'arquivos' | 'historico' | 'metricas'>('detalhes');
+  const [modalTab, setModalTab] = useState<PostModalTab>('detalhes');
 
   const [isNewPostModalOpen, setIsNewPostModalOpen] = useState(false);
   const [newPostDefaults, setNewPostDefaults] = useState<{ status: PostStatus; date: string }>({
@@ -151,6 +200,21 @@ export function ContentProvider({ children }: { children: ReactNode }) {
 
       const savedIntegrations = localStorage.getItem(LOCAL_STORAGE_KEY_INTEGRATIONS);
       if (savedIntegrations) setIntegrations(JSON.parse(savedIntegrations));
+
+      const savedDriveFolders = localStorage.getItem(LOCAL_STORAGE_KEY_DRIVE_FOLDERS);
+      if (savedDriveFolders) setDriveFolders(JSON.parse(savedDriveFolders));
+
+      const savedCampaigns = localStorage.getItem(LOCAL_STORAGE_KEY_CAMPAIGNS);
+      if (savedCampaigns) setCampaigns(JSON.parse(savedCampaigns));
+
+      const savedAds = localStorage.getItem(LOCAL_STORAGE_KEY_ADS);
+      if (savedAds) setAds(JSON.parse(savedAds));
+
+      const savedPixel = localStorage.getItem(LOCAL_STORAGE_KEY_PIXEL);
+      if (savedPixel) setPixelConfig(JSON.parse(savedPixel));
+
+      const savedAuditLogs = localStorage.getItem(LOCAL_STORAGE_KEY_AUDIT_LOGS);
+      if (savedAuditLogs) setAuditLogs(JSON.parse(savedAuditLogs));
 
       const wasLoggedOut = localStorage.getItem(LOCAL_STORAGE_KEY_LOGGED_OUT) === 'true';
       const savedSession = localStorage.getItem(LOCAL_STORAGE_KEY_SESSION);
@@ -219,6 +283,30 @@ export function ContentProvider({ children }: { children: ReactNode }) {
       }
     } catch {}
   }, [currentUser, isAuthenticated]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(LOCAL_STORAGE_KEY_DRIVE_FOLDERS, JSON.stringify(driveFolders));
+    } catch {}
+  }, [driveFolders]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(LOCAL_STORAGE_KEY_CAMPAIGNS, JSON.stringify(campaigns));
+    } catch {}
+  }, [campaigns]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(LOCAL_STORAGE_KEY_ADS, JSON.stringify(ads));
+    } catch {}
+  }, [ads]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(LOCAL_STORAGE_KEY_AUDIT_LOGS, JSON.stringify(auditLogs));
+    } catch {}
+  }, [auditLogs]);
 
   // Try to load real data from Supabase if configured
   useEffect(() => {
@@ -303,7 +391,34 @@ export function ContentProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  // Update Post Status
+  // Add Audit Log
+  const addAuditLog = async (
+    action: string,
+    entityType: 'POST' | 'IDEA' | 'CAMPAIGN' | 'AD' | 'FILE' | 'INTEGRATION',
+    entityId?: string,
+    entityTitle?: string,
+    details?: string
+  ) => {
+    const newLog: AuditLog = {
+      id: `log-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+      user_id: currentUser?.id,
+      user_name: currentUser?.nome || 'Operador',
+      action,
+      entity_type: entityType,
+      entity_id: entityId,
+      entity_title: entityTitle,
+      details,
+      criado_em: new Date().toISOString(),
+    };
+    setAuditLogs((prev) => [newLog, ...prev]);
+    if (isSupabaseLive) {
+      try {
+        await supabase.from('audit_logs').insert([newLog]);
+      } catch {}
+    }
+  };
+
+  // Update Post Status & Synchronize with Google Drive folder mapping
   const updatePostStatus = async (id: string, newStatus: PostStatus) => {
     const post = posts.find((p) => p.id === id);
     if (!post || post.status === newStatus) return;
@@ -312,22 +427,102 @@ export function ContentProvider({ children }: { children: ReactNode }) {
     const newStatusLabel = newStatus.replace('_', ' ').toUpperCase();
     const now = new Date().toISOString();
 
+    // Check Drive folder mapping for target status
+    const targetFolder = driveFolders.find((df) => df.status === newStatus);
+    const driveUpdates: Partial<Post> = {};
+    if (targetFolder) {
+      driveUpdates.drive_folder_id = targetFolder.folder_id;
+      driveUpdates.drive_folder_name = targetFolder.folder_name;
+    }
+
+    const updatedPost: Post = {
+      ...post,
+      status: newStatus,
+      ...driveUpdates,
+      atualizado_em: now,
+    };
+
     setPosts((prev) =>
-      prev.map((p) => (p.id === id ? { ...p, status: newStatus, atualizado_em: now } : p))
+      prev.map((p) => (p.id === id ? updatedPost : p))
     );
 
     if (selectedPost && selectedPost.id === id) {
-      setSelectedPost((prev) => (prev ? { ...prev, status: newStatus, atualizado_em: now } : null));
+      setSelectedPost((prev) => (prev ? updatedPost : null));
     }
 
-    await addHistory(id, 'Status Atualizado', `Moveu de "${oldStatusLabel}" para "${newStatusLabel}"`);
+    const driveLogDetail = targetFolder
+      ? ` Arquivo movido no Google Drive para pasta "${targetFolder.folder_name}".`
+      : '';
+
+    await addHistory(id, 'Status Atualizado', `Moveu de "${oldStatusLabel}" para "${newStatusLabel}".${driveLogDetail}`);
+    await addAuditLog('MOVE_STATUS', 'POST', id, post.titulo, `Status alterado de ${oldStatusLabel} para ${newStatusLabel}.${driveLogDetail}`);
 
     if (isSupabaseLive) {
       try {
-        await supabase.from('posts').update({ status: newStatus, atualizado_em: now }).eq('id', id);
+        await supabase.from('posts').update({ status: newStatus, ...driveUpdates, atualizado_em: now }).eq('id', id);
+        if (targetFolder) {
+          await supabase.from('google_drive_sync_logs').insert([{
+            post_id: id,
+            action: 'MOVE_FOLDER',
+            from_folder_id: post.drive_folder_id || '',
+            from_folder_name: post.drive_folder_name || '',
+            to_folder_id: targetFolder.folder_id,
+            to_folder_name: targetFolder.folder_name,
+            status: 'sucesso',
+          }]);
+        }
       } catch (err) {
         console.error('Error updating status in Supabase:', err);
       }
+    }
+  };
+
+  const moveGoogleDriveFile = async (postId: string, newStatus: PostStatus) => {
+    const post = posts.find((p) => p.id === postId);
+    const targetFolder = driveFolders.find((df) => df.status === newStatus);
+    if (!post || !targetFolder) {
+      return { success: false, folderName: '' };
+    }
+    await updatePostStatus(postId, newStatus);
+    return { success: true, folderName: targetFolder.folder_name };
+  };
+
+  const linkPostToAd = async (postId: string, adId: string, campaignId?: string) => {
+    const post = posts.find((p) => p.id === postId);
+    const ad = ads.find((a) => a.id === adId);
+    if (!post || !ad) return;
+
+    const now = new Date().toISOString();
+    const updatedPost: Post = {
+      ...post,
+      meta_ad_id: adId,
+      meta_campaign_id: campaignId || ad.campaign_id,
+      classificacao: post.classificacao === 'organico' ? 'organico_patrocinado' : post.classificacao,
+      uso_trafego_pago: 'ativo',
+      atualizado_em: now,
+    };
+
+    setPosts((prev) => prev.map((p) => (p.id === postId ? updatedPost : p)));
+    if (selectedPost && selectedPost.id === postId) {
+      setSelectedPost(updatedPost);
+    }
+
+    setAds((prev) => prev.map((a) => (a.id === adId ? { ...a, post_id: postId } : a)));
+
+    await addHistory(postId, 'Vínculo Meta Ads', `Conteúdo associado ao anúncio "${ad.name}"`);
+    await addAuditLog('LINK_AD', 'AD', adId, ad.name, `Vinculado ao post "${post.titulo}" (ID: ${postId})`);
+
+    if (isSupabaseLive) {
+      try {
+        await supabase.from('posts').update({
+          meta_ad_id: adId,
+          meta_campaign_id: campaignId || ad.campaign_id,
+          classificacao: updatedPost.classificacao,
+          uso_trafego_pago: 'ativo',
+          atualizado_em: now,
+        }).eq('id', postId);
+        await supabase.from('meta_ads').update({ post_id: postId }).eq('id', adId);
+      } catch {}
     }
   };
 
@@ -631,7 +826,7 @@ export function ContentProvider({ children }: { children: ReactNode }) {
   };
 
   // Modal handlers
-  const openPostModal = (post: Post, tab: 'detalhes' | 'roteiro' | 'arquivos' | 'historico' | 'metricas' = 'detalhes') => {
+  const openPostModal = (post: Post, tab: PostModalTab = 'detalhes') => {
     setSelectedPost(post);
     setModalTab(tab);
     setIsModalOpen(true);
@@ -960,6 +1155,17 @@ export function ContentProvider({ children }: { children: ReactNode }) {
         isSupabaseLive,
         currentUser,
         setCurrentUser,
+        driveFolders,
+        setDriveFolders,
+        campaigns,
+        adSets,
+        ads,
+        creatives,
+        pixelConfig,
+        auditLogs,
+        addAuditLog,
+        moveGoogleDriveFile,
+        linkPostToAd,
       }}
     >
       {children}
