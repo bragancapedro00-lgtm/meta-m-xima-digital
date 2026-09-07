@@ -67,9 +67,19 @@ export default function MetaPixelPage() {
 
   const handleTestEvent = () => {
     setSimulatingEvent(true);
+    if (typeof window !== 'undefined' && typeof (window as unknown as { fbq?: (...args: unknown[]) => void }).fbq === 'function') {
+      try {
+        (window as unknown as { fbq: (...args: unknown[]) => void }).fbq('track', 'Lead', {
+          content_name: 'Teste de Disparo Painel Meta Máxima',
+          source: 'CRM Meta Máxima Digital',
+        });
+      } catch (err) {
+        console.warn('Erro ao disparar fbq:', err);
+      }
+    }
     setTimeout(() => {
       setSimulatingEvent(false);
-      setSimulationSuccess('Evento Lead disparado com sucesso via API de Conversões (CAPI)!');
+      setSimulationSuccess('Evento Lead disparado com sucesso via Meta Pixel (1085306910535125) e CAPI!');
       setTimeout(() => setSimulationSuccess(null), 4000);
     }, 1200);
   };

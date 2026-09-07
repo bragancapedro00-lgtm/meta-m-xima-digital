@@ -450,7 +450,7 @@ export default function ConnectIntegrationModal({
                   required
                   value={formData.pixel_id || ''}
                   onChange={(e) => handleChange('pixel_id', e.target.value)}
-                  placeholder="Ex: 129481029482019 (15 a 16 dígitos)"
+                  placeholder="Ex: 1085306910535125 (15 a 16 dígitos)"
                   className="w-full rounded-lg bg-slate-900 border border-slate-700 px-3.5 py-2.5 text-xs text-slate-100 font-mono focus:outline-none focus:border-indigo-500"
                 />
                 <span className="text-[11px] text-slate-500 mt-1 block">

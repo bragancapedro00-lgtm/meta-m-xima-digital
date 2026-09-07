@@ -527,7 +527,7 @@ export const INITIAL_INTEGRATIONS: IntegracaoConfig[] = [
     status: 'conectado',
     ultima_sincronizacao: new Date(Date.now() - 3600000 * 1).toISOString(),
     credenciais: {
-      pixel_id: '129481029482019',
+      pixel_id: '1085306910535125',
       pixel_conversion_token: 'EAABwz...',
     },
   },
@@ -715,7 +715,7 @@ export const INITIAL_ADS: MetaAd[] = [
 ];
 
 export const INITIAL_PIXEL_CONFIG: MetaPixelConfig = {
-  pixel_id: '129481029482019',
+  pixel_id: '1085306910535125',
   name: 'Pixel Principal Meta Máxima Digital',
   status: 'ativo',
   last_event_time: new Date(Date.now() - 1000 * 90).toISOString(),
@@ -723,7 +723,7 @@ export const INITIAL_PIXEL_CONFIG: MetaPixelConfig = {
   events: [
     {
       id: 'px-ev-1',
-      pixel_id: '129481029482019',
+      pixel_id: '1085306910535125',
       event_name: 'PageView',
       event_count: 52410,
       last_fired_at: 'Há 2 minutos',
@@ -731,7 +731,7 @@ export const INITIAL_PIXEL_CONFIG: MetaPixelConfig = {
     },
     {
       id: 'px-ev-2',
-      pixel_id: '129481029482019',
+      pixel_id: '1085306910535125',
       event_name: 'ViewContent',
       event_count: 18920,
       last_fired_at: 'Há 5 minutos',
@@ -739,7 +739,7 @@ export const INITIAL_PIXEL_CONFIG: MetaPixelConfig = {
     },
     {
       id: 'px-ev-3',
-      pixel_id: '129481029482019',
+      pixel_id: '1085306910535125',
       event_name: 'Lead',
       event_count: 1580,
       last_fired_at: 'Há 14 minutos',
@@ -747,7 +747,7 @@ export const INITIAL_PIXEL_CONFIG: MetaPixelConfig = {
     },
     {
       id: 'px-ev-4',
-      pixel_id: '129481029482019',
+      pixel_id: '1085306910535125',
       event_name: 'Contact',
       event_count: 740,
       last_fired_at: 'Há 40 minutos',
@@ -755,7 +755,7 @@ export const INITIAL_PIXEL_CONFIG: MetaPixelConfig = {
     },
     {
       id: 'px-ev-5',
-      pixel_id: '129481029482019',
+      pixel_id: '1085306910535125',
       event_name: 'CompleteRegistration',
       event_count: 310,
       last_fired_at: 'Há 1 hora',
