@@ -66,21 +66,9 @@ const NAV_GROUPS: NavGroup[] = [
     ],
   },
   {
-    label: 'TRÁFEGO PAGO & META ADS',
+    label: 'RELATÓRIOS & ANÁLISE',
     items: [
-      { name: 'Meta Ads Manager', href: '/marketing/meta-ads', icon: Megaphone },
-      { name: 'Conteúdos Patrocinados', href: '/marketing/patrocinados', icon: Sparkles },
-      { name: 'Meta Pixel & Sinais', href: '/marketing/pixel', icon: Radio },
-      { name: 'Performance de Criativos', href: '/marketing/performance', icon: BarChart3 },
-      { name: 'Relatórios de Impacto', href: '/relatorios', icon: FileSpreadsheet },
-    ],
-  },
-  {
-    label: 'CANAIS & ANALYTICS',
-    items: [
-      { name: 'Instagram Insights', href: '/instagram', icon: InstagramIcon },
-      { name: 'Facebook Page', href: '/analytics/facebook', icon: FacebookIcon },
-      { name: 'Google Analytics 4', href: '/analytics', icon: TrendingUp },
+      { name: 'Relatórios de Conteúdos', href: '/relatorios', icon: FileSpreadsheet },
     ],
   },
   {
@@ -158,25 +146,27 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const overdueCount = posts.filter(isOverdue).length;
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-[#090d16] text-slate-100 font-sans">
+    <div className="flex h-screen w-screen overflow-hidden bg-[#09090b] text-zinc-100 font-sans">
       
       {/* ========================================================================= */}
       {/* DESKTOP SIDEBAR (FIXED, 260px) */}
       {/* ========================================================================= */}
-      <aside className="hidden lg:flex flex-col w-64 border-r border-slate-800/80 bg-slate-950/60 backdrop-blur-md select-none shrink-0 z-20">
+      <aside className="hidden lg:flex flex-col w-64 border-r border-zinc-800/80 bg-zinc-950/95 backdrop-blur-md select-none shrink-0 z-20">
         {/* Brand Header */}
-        <div className="flex items-center gap-3 px-5 py-5 border-b border-slate-800/80">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-indigo-600 border border-indigo-400/30 text-white font-bold text-base">
-            M
-          </div>
-          <div className="flex flex-col">
-            <span className="text-sm font-bold tracking-tight text-white flex items-center gap-1.5">
+        <div className="flex items-center gap-3 px-5 py-4 border-b border-zinc-800/80">
+          <img
+            src="/logo.png"
+            alt="BRG Logo"
+            className="h-9 w-9 rounded-lg object-contain bg-black border border-zinc-800 p-0.5 shrink-0 shadow"
+          />
+          <div className="flex flex-col min-w-0">
+            <span className="text-sm font-bold tracking-tight text-white flex items-center gap-1.5 truncate">
               META MÁXIMA
-              <span className="text-[10px] uppercase font-semibold text-indigo-400 bg-indigo-500/10 px-1 rounded border border-indigo-500/20">
+              <span className="text-[10px] uppercase font-semibold text-blue-400 bg-blue-500/10 px-1 rounded border border-blue-500/20 shrink-0">
                 PRO
               </span>
             </span>
-            <span className="text-[11px] font-medium text-slate-400">Content CRM & Ops</span>
+            <span className="text-[11px] font-medium text-zinc-400 truncate">CRM de Conteúdo & IA</span>
           </div>
         </div>
 
@@ -184,9 +174,9 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         <div className="p-4 pb-2">
           <button
             onClick={() => openNewPostModal('a_gravar')}
-            className="flex w-full items-center justify-center gap-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 py-2.5 px-3 text-xs font-semibold text-white shadow-sm shadow-indigo-600/30 transition-all active:scale-[0.98]"
+            className="flex w-full items-center justify-center gap-2 rounded-lg bg-zinc-900 hover:bg-zinc-800 border border-zinc-700/80 py-2.5 px-3 text-xs font-semibold text-white shadow-sm transition-all active:scale-[0.98]"
           >
-            <Plus className="h-4 w-4" />
+            <Plus className="h-4 w-4 text-blue-400" />
             + Novo Conteúdo
           </button>
         </div>
@@ -195,7 +185,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         <nav className="flex-1 overflow-y-auto px-3 py-2 space-y-4">
           {NAV_GROUPS.map((group) => (
             <div key={group.label} className="space-y-0.5">
-              <div className="px-3 py-1 text-[10px] font-bold tracking-wider text-slate-500 uppercase">
+              <div className="px-3 py-1 text-[10px] font-bold tracking-wider text-zinc-500 uppercase">
                 {group.label}
               </div>
               {group.items.map((item) => {
@@ -208,14 +198,14 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                     href={item.href}
                     className={`group flex items-center justify-between rounded-md px-3 py-1.5 text-xs font-medium transition-all ${
                       isActive
-                        ? 'bg-indigo-600/15 text-indigo-400 border border-indigo-500/25 font-semibold'
-                        : 'text-slate-400 hover:bg-slate-900 hover:text-slate-200'
+                        ? 'bg-zinc-900 text-white border border-zinc-700/80 font-semibold shadow-sm'
+                        : 'text-zinc-400 hover:bg-zinc-900/60 hover:text-zinc-200'
                     }`}
                   >
                     <div className="flex items-center gap-2.5 min-w-0">
                       <Icon
                         className={`h-4 w-4 shrink-0 transition-colors ${
-                          isActive ? 'text-indigo-400' : 'text-slate-400 group-hover:text-slate-200'
+                          isActive ? 'text-blue-400' : 'text-zinc-400 group-hover:text-zinc-200'
                         }`}
                       />
                       <span className="truncate">{item.name}</span>
@@ -334,24 +324,26 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       <div className="flex flex-1 flex-col overflow-hidden min-w-0">
         
         {/* Mobile Top Header */}
-        <header className="lg:hidden flex items-center justify-between border-b border-slate-800 bg-slate-950/80 px-4 py-3 shrink-0">
+        <header className="lg:hidden flex items-center justify-between border-b border-zinc-800 bg-zinc-950/90 px-4 py-3 shrink-0">
           <div className="flex items-center gap-2.5">
-            <div className="flex h-7 w-7 items-center justify-center rounded bg-indigo-600 text-white font-bold text-xs">
-              M
-            </div>
+            <img
+              src="/logo.png"
+              alt="BRG Logo"
+              className="h-7 w-7 rounded object-contain bg-black border border-zinc-800 shrink-0"
+            />
             <span className="text-xs font-bold text-white tracking-wider">META MÁXIMA</span>
           </div>
 
           <div className="flex items-center gap-2">
             <button
               onClick={() => openNewPostModal('a_gravar')}
-              className="rounded bg-indigo-600 px-2.5 py-1.5 text-xs font-semibold text-white shadow-sm"
+              className="rounded bg-zinc-900 border border-zinc-700 px-2.5 py-1.5 text-xs font-semibold text-white shadow-sm"
             >
               + Post
             </button>
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="rounded p-1.5 text-slate-400 hover:bg-slate-800 hover:text-white"
+              className="rounded p-1.5 text-zinc-400 hover:bg-zinc-900 hover:text-white"
             >
               {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </button>
@@ -360,11 +352,11 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
         {/* Mobile Collapsible Full Navigation Drawer */}
         {mobileMenuOpen && (
-          <div className="lg:hidden fixed inset-x-0 top-[53px] bottom-14 z-40 bg-slate-950/95 backdrop-blur-md p-4 overflow-y-auto border-b border-slate-800">
+          <div className="lg:hidden fixed inset-x-0 top-[53px] bottom-14 z-40 bg-zinc-950/95 backdrop-blur-md p-4 overflow-y-auto border-b border-zinc-800">
             <nav className="space-y-4">
               {NAV_GROUPS.map((group) => (
                 <div key={group.label} className="space-y-1">
-                  <div className="px-3 py-1 text-[10px] font-bold tracking-wider text-slate-500 uppercase">
+                  <div className="px-3 py-1 text-[10px] font-bold tracking-wider text-zinc-500 uppercase">
                     {group.label}
                   </div>
                   {group.items.map((item) => {
@@ -377,8 +369,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                         onClick={() => setMobileMenuOpen(false)}
                         className={`flex items-center justify-between rounded-lg px-3 py-2 text-sm font-medium ${
                           isActive
-                            ? 'bg-indigo-600/20 text-indigo-400 border border-indigo-500/30'
-                            : 'text-slate-300 hover:bg-slate-900'
+                            ? 'bg-zinc-900 text-white border border-zinc-700 font-semibold'
+                            : 'text-zinc-300 hover:bg-zinc-900'
                         }`}
                       >
                         <div className="flex items-center gap-3">
@@ -465,20 +457,20 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         )}
 
         {/* Content Children (Scrollable Viewport) */}
-        <main className="flex-1 overflow-y-auto overflow-x-hidden bg-[#090d16] flex flex-col">
+        <main className="flex-1 overflow-y-auto overflow-x-hidden bg-[#09090b] flex flex-col">
           {children}
         </main>
 
         {/* Mobile Bottom Navigation Bar (4 primary quick links with 44px touch targets) */}
         <nav
           aria-label="Navegação rápida mobile"
-          className="lg:hidden flex items-center justify-around border-t border-slate-800 bg-slate-950 px-2 py-1 shrink-0 z-30"
+          className="lg:hidden flex items-center justify-around border-t border-zinc-800 bg-zinc-950 px-2 py-1 shrink-0 z-30"
         >
           <Link
             href="/"
             aria-label="Ir para o Início"
             className={`flex flex-col items-center justify-center min-h-[44px] min-w-[44px] gap-1 p-1 text-[10px] font-medium ${
-              pathname === '/' ? 'text-indigo-400' : 'text-slate-400 hover:text-slate-200'
+              pathname === '/' ? 'text-blue-400 font-semibold' : 'text-zinc-400 hover:text-zinc-200'
             }`}
           >
             <LayoutDashboard className="h-4 w-4" />
@@ -489,7 +481,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             href="/kanban"
             aria-label="Ir para o Kanban"
             className={`relative flex flex-col items-center justify-center min-h-[44px] min-w-[44px] gap-1 p-1 text-[10px] font-medium ${
-              pathname === '/kanban' ? 'text-indigo-400' : 'text-slate-400 hover:text-slate-200'
+              pathname === '/kanban' ? 'text-blue-400 font-semibold' : 'text-zinc-400 hover:text-zinc-200'
             }`}
           >
             <KanbanSquare className="h-4 w-4" />
@@ -503,7 +495,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             href="/calendario"
             aria-label="Ir para o Calendário"
             className={`flex flex-col items-center justify-center min-h-[44px] min-w-[44px] gap-1 p-1 text-[10px] font-medium ${
-              pathname === '/calendario' ? 'text-indigo-400' : 'text-slate-400 hover:text-slate-200'
+              pathname === '/calendario' ? 'text-blue-400 font-semibold' : 'text-zinc-400 hover:text-zinc-200'
             }`}
           >
             <Calendar className="h-4 w-4" />
@@ -511,21 +503,21 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           </Link>
 
           <Link
-            href="/planejamento"
-            aria-label="Ir para o Planejamento e Ideias"
+            href="/relatorios"
+            aria-label="Ir para os Relatórios"
             className={`flex flex-col items-center justify-center min-h-[44px] min-w-[44px] gap-1 p-1 text-[10px] font-medium ${
-              pathname === '/planejamento' ? 'text-indigo-400' : 'text-slate-400 hover:text-slate-200'
+              pathname === '/relatorios' ? 'text-blue-400 font-semibold' : 'text-zinc-400 hover:text-zinc-200'
             }`}
           >
-            <Lightbulb className="h-4 w-4" />
-            <span>Ideias</span>
+            <FileSpreadsheet className="h-4 w-4" />
+            <span>Relatórios</span>
           </Link>
 
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             aria-label="Abrir menu completo"
             className={`flex flex-col items-center justify-center min-h-[44px] min-w-[44px] gap-1 p-1 text-[10px] font-medium ${
-              mobileMenuOpen ? 'text-indigo-400' : 'text-slate-400 hover:text-slate-200'
+              mobileMenuOpen ? 'text-blue-400' : 'text-zinc-400 hover:text-zinc-200'
             }`}
           >
             <Menu className="h-4 w-4" />

@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { useContent } from '@/lib/context/ContentContext';
 import { Post } from '@/types';
+import AccountBadge from '@/components/common/AccountBadge';
 import {
   Search,
   Filter,
@@ -18,7 +19,7 @@ import {
 } from 'lucide-react';
 
 export default function ContentsListView() {
-  const { filteredPosts, openPostModal, openNewPostModal, isOverdue } = useContent();
+  const { filteredPosts, openPostModal, openNewPostModal, isOverdue, filters, setFilters } = useContent();
   const [sortField, setSortField] = useState<'data' | 'titulo' | 'status'>('data');
   const [sortAsc, setSortAsc] = useState(true);
 
@@ -43,33 +44,71 @@ export default function ContentsListView() {
   };
 
   return (
-    <div className="flex flex-1 flex-col h-full overflow-hidden bg-[#090d16]">
+    <div className="flex flex-1 flex-col h-full overflow-hidden bg-zinc-950">
       {/* Header */}
-      <div className="flex flex-wrap items-center justify-between gap-4 p-6 border-b border-slate-800/80 bg-slate-950/40 shrink-0">
+      <div className="flex flex-wrap items-center justify-between gap-4 p-6 border-b border-zinc-800/80 bg-zinc-900/40 shrink-0">
         <div>
-          <span className="text-xs font-semibold uppercase tracking-wider text-indigo-400">
+          <span className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
             Base de Produção
           </span>
           <h2 className="text-xl font-bold text-white mt-0.5">Lista de Conteúdos</h2>
-          <p className="text-xs text-slate-400 mt-1">
-            Visualização de alta densidade em formato de tabela com filtros e status operacional.
+          <p className="text-xs text-zinc-400 mt-1">
+            Visualização em formato de tabela com filtros de conta e status operacional.
           </p>
         </div>
 
-        <button
-          onClick={() => openNewPostModal('a_gravar')}
-          className="flex items-center gap-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 px-4 py-2 text-xs font-semibold text-white shadow-sm transition-all active:scale-95"
-        >
-          <Plus className="h-4 w-4" />
-          <span>+ Novo Conteúdo</span>
-        </button>
+        <div className="flex items-center flex-wrap gap-3">
+          {/* Account Filter Pills */}
+          <div className="flex items-center gap-1 bg-zinc-900 border border-zinc-800 rounded-lg p-0.5 text-xs font-medium">
+            <button
+              onClick={() => setFilters((prev) => ({ ...prev, conta: undefined }))}
+              className={`px-3 py-1.5 rounded transition-colors ${
+                !filters.conta
+                  ? 'bg-zinc-800 text-white font-semibold'
+                  : 'text-zinc-400 hover:text-zinc-200'
+              }`}
+            >
+              Todas
+            </button>
+            <button
+              onClick={() => setFilters((prev) => ({ ...prev, conta: 'meta_maxima_digital' }))}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded transition-colors ${
+                filters.conta === 'meta_maxima_digital'
+                  ? 'bg-blue-950/80 text-blue-400 border border-blue-500/40 font-semibold'
+                  : 'text-zinc-400 hover:text-zinc-200'
+              }`}
+            >
+              <span className="h-1.5 w-1.5 rounded-full bg-blue-400" />
+              Digital
+            </button>
+            <button
+              onClick={() => setFilters((prev) => ({ ...prev, conta: 'meta_maxima_cursos' }))}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded transition-colors ${
+                filters.conta === 'meta_maxima_cursos'
+                  ? 'bg-emerald-950/80 text-emerald-400 border border-emerald-500/40 font-semibold'
+                  : 'text-zinc-400 hover:text-zinc-200'
+              }`}
+            >
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+              Cursos
+            </button>
+          </div>
+
+          <button
+            onClick={() => openNewPostModal('a_gravar')}
+            className="flex items-center gap-1.5 rounded-lg bg-zinc-100 hover:bg-white text-zinc-950 px-4 py-2 text-xs font-semibold shadow-sm transition-all active:scale-95"
+          >
+            <Plus className="h-4 w-4" />
+            <span>+ Novo Conteúdo</span>
+          </button>
+        </div>
       </div>
 
       {/* Table Container */}
       <div className="flex-1 overflow-y-auto p-6">
-        <div className="rounded-xl border border-slate-800 bg-slate-900/80 shadow-sm overflow-hidden">
-          <table className="w-full text-left text-xs text-slate-300">
-            <thead className="bg-slate-950/80 border-b border-slate-800 text-[11px] font-bold uppercase tracking-wider text-slate-400">
+        <div className="rounded-xl border border-zinc-800 bg-zinc-900/80 shadow-sm overflow-hidden">
+          <table className="w-full text-left text-xs text-zinc-300">
+            <thead className="bg-zinc-950/80 border-b border-zinc-800 text-[11px] font-bold uppercase tracking-wider text-zinc-400">
               <tr>
                 <th
                   onClick={() => toggleSort('titulo')}
@@ -80,6 +119,7 @@ export default function ContentsListView() {
                     <ArrowUpDown className="h-3 w-3" />
                   </div>
                 </th>
+                <th className="px-4 py-3">Conta</th>
                 <th className="px-4 py-3">Tipo</th>
                 <th className="px-4 py-3">Funil</th>
                 <th
@@ -105,7 +145,7 @@ export default function ContentsListView() {
                 <th className="px-4 py-3 text-right">Ação</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800/80">
+            <tbody className="divide-y divide-zinc-800/80">
               {sortedPosts.map((post) => {
                 const overdue = isOverdue(post);
 
@@ -113,37 +153,42 @@ export default function ContentsListView() {
                   <tr
                     key={post.id}
                     onClick={() => openPostModal(post, 'detalhes')}
-                    className="hover:bg-slate-800/60 cursor-pointer transition-colors"
+                    className="hover:bg-zinc-800/60 cursor-pointer transition-colors"
                   >
                     {/* Título */}
                     <td className="px-4 py-3 max-w-xs truncate">
-                      <p className="font-semibold text-slate-100 truncate hover:text-indigo-300">
+                      <p className="font-semibold text-zinc-100 truncate hover:text-white">
                         {post.titulo}
                       </p>
                       {post.gancho && (
-                        <p className="text-[11px] text-slate-400 italic truncate mt-0.5">
+                        <p className="text-[11px] text-zinc-400 italic truncate mt-0.5">
                           {post.gancho}
                         </p>
                       )}
                     </td>
 
+                    {/* Conta (Tag) */}
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <AccountBadge conta={post.conta} tags={post.tags} size="sm" />
+                    </td>
+
                     {/* Tipo */}
                     <td className="px-4 py-3 whitespace-nowrap">
-                      <span className="text-[11px] font-semibold text-indigo-400 bg-indigo-500/10 border border-indigo-500/20 px-2 py-0.5 rounded">
+                      <span className="text-[11px] font-semibold text-zinc-300 bg-zinc-800 border border-zinc-700 px-2 py-0.5 rounded">
                         {post.tipo?.replace('_', ' ')}
                       </span>
                     </td>
 
                     {/* Funil */}
                     <td className="px-4 py-3 whitespace-nowrap">
-                      <span className="uppercase text-[10px] font-bold text-slate-300 bg-slate-800 px-2 py-0.5 rounded">
+                      <span className="uppercase text-[10px] font-bold text-zinc-400 bg-zinc-800/60 border border-zinc-700/50 px-2 py-0.5 rounded">
                         {post.etapa_funil}
                       </span>
                     </td>
 
                     {/* Status */}
                     <td className="px-4 py-3 whitespace-nowrap">
-                      <span className="uppercase text-[10px] font-bold tracking-wider px-2 py-0.5 rounded bg-slate-800 text-slate-200">
+                      <span className="uppercase text-[10px] font-bold tracking-wider px-2 py-0.5 rounded bg-zinc-800 text-zinc-200 border border-zinc-700/60">
                         {post.status.replace('_', ' ')}
                       </span>
                     </td>
@@ -156,7 +201,7 @@ export default function ContentsListView() {
                           {post.data_publicacao}
                         </span>
                       ) : (
-                        <span className="text-slate-300 tabular-nums">
+                        <span className="text-zinc-300 tabular-nums">
                           {post.data_publicacao} às {post.hora_publicacao}
                         </span>
                       )}
@@ -164,7 +209,7 @@ export default function ContentsListView() {
 
                     {/* Responsável */}
                     <td className="px-4 py-3 whitespace-nowrap">
-                      <span className="text-slate-300">{post.responsavel}</span>
+                      <span className="text-zinc-300">{post.responsavel}</span>
                     </td>
 
                     {/* Prioridade */}
@@ -172,10 +217,10 @@ export default function ContentsListView() {
                       <span
                         className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded ${
                           post.prioridade === 'urgente'
-                            ? 'text-rose-400 bg-rose-500/15'
+                            ? 'text-rose-400 bg-rose-500/15 border border-rose-500/30'
                             : post.prioridade === 'alta'
-                            ? 'text-amber-400 bg-amber-500/15'
-                            : 'text-slate-400 bg-slate-800'
+                            ? 'text-amber-400 bg-amber-500/15 border border-amber-500/30'
+                            : 'text-zinc-400 bg-zinc-800 border border-zinc-700/50'
                         }`}
                       >
                         {post.prioridade}
@@ -189,7 +234,7 @@ export default function ContentsListView() {
                           e.stopPropagation();
                           openPostModal(post, 'detalhes');
                         }}
-                        className="text-xs font-semibold text-indigo-400 hover:text-indigo-300 hover:underline"
+                        className="text-xs font-semibold text-zinc-200 hover:text-white underline underline-offset-2"
                       >
                         Abrir
                       </button>

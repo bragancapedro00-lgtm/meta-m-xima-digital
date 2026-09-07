@@ -90,22 +90,26 @@ function LoginForm() {
     <div className="w-full max-w-md space-y-8">
       {/* Brand Header */}
       <div className="text-center space-y-2">
-        <div className="inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-indigo-600 border border-indigo-400/30 text-white font-black text-2xl mb-2 shadow-sm">
-          M
+        <div className="flex justify-center mb-3">
+          <img
+            src="/logo.png"
+            alt="Meta Máxima Logo"
+            className="h-16 w-auto object-contain drop-shadow-md"
+          />
         </div>
         <h1 className="text-2xl font-black tracking-tight text-white flex items-center justify-center gap-2">
           META MÁXIMA
-          <span className="text-xs uppercase font-bold text-indigo-400 bg-indigo-500/10 border border-indigo-500/20 px-2 py-0.5 rounded-md">
-            CRM & Ops
+          <span className="text-xs uppercase font-bold text-zinc-300 bg-zinc-800 border border-zinc-700 px-2 py-0.5 rounded-md">
+            SaaS & Ops
           </span>
         </h1>
-        <p className="text-xs text-slate-400 max-w-xs mx-auto">
-          Portal de acesso dos colaboradores. Entre com seu e-mail para acessar sua esteira de conteúdo e tarefas.
+        <p className="text-xs text-zinc-400 max-w-xs mx-auto">
+          Portal operacional de conteúdos e inteligência artificial. Entre para acessar sua esteira de produção.
         </p>
       </div>
 
       {/* Main Login Card */}
-      <div className="rounded-2xl bg-slate-900/90 border border-slate-800 p-6 md:p-8 shadow-2xl space-y-6">
+      <div className="rounded-2xl bg-zinc-900 border border-zinc-800 p-6 md:p-8 shadow-2xl space-y-6">
         {/* Success Alert */}
         {successUser ? (
           <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs space-y-2 text-center animate-fade-in">
@@ -114,7 +118,7 @@ function LoginForm() {
             <p className="text-[11px] text-emerald-300">
               Acessando como <strong>{successUser.cargo}</strong> ({successUser.role.toUpperCase()})...
             </p>
-            <div className="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden mt-2">
+            <div className="w-full bg-zinc-800 rounded-full h-1.5 overflow-hidden mt-2">
               <div className="bg-emerald-400 h-1.5 w-full animate-pulse" />
             </div>
           </div>
@@ -130,8 +134,8 @@ function LoginForm() {
 
             {/* Email Field */}
             <div>
-              <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
-                <Mail className="h-3.5 w-3.5 text-indigo-400" />
+              <label className="block text-xs font-semibold text-zinc-300 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                <Mail className="h-3.5 w-3.5 text-zinc-400" />
                 Seu E-mail de Colaborador *
               </label>
               <input
@@ -140,14 +144,14 @@ function LoginForm() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="nome@metamaxima.com.br"
-                className="w-full rounded-xl bg-slate-950/80 border border-slate-700 px-4 py-3 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all min-h-[48px]"
+                className="w-full rounded-xl bg-zinc-950 border border-zinc-750 px-4 py-3 text-sm text-white placeholder:text-zinc-500 focus:outline-none focus:border-zinc-500 focus:ring-1 focus:ring-zinc-500 transition-all min-h-[48px]"
               />
             </div>
 
             {/* Password Field */}
             <div>
-              <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
-                <Lock className="h-3.5 w-3.5 text-indigo-400" />
+              <label className="block text-xs font-semibold text-zinc-300 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                <Lock className="h-3.5 w-3.5 text-zinc-400" />
                 Senha de Acesso *
               </label>
               <div className="relative">
@@ -158,18 +162,18 @@ function LoginForm() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Digite sua senha cadastrada"
-                  className="w-full rounded-xl bg-slate-950/80 border border-slate-700 pl-4 pr-11 py-3 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all min-h-[48px] font-mono"
+                  className="w-full rounded-xl bg-zinc-950 border border-zinc-750 pl-4 pr-11 py-3 text-sm text-white placeholder:text-zinc-500 focus:outline-none focus:border-zinc-500 focus:ring-1 focus:ring-zinc-500 transition-all min-h-[48px] font-mono"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   aria-label={showPassword ? 'Ocultar senha' : 'Ver senha'}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white p-1"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-white p-1"
                 >
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
-              <span className="text-[11px] text-slate-500 mt-1 block">
+              <span className="text-[11px] text-zinc-500 mt-1 block">
                 Senha definida pelo administrador no cadastro do seu perfil.
               </span>
             </div>
@@ -178,7 +182,7 @@ function LoginForm() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full flex items-center justify-center gap-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-sm py-3.5 px-4 shadow-sm transition-all active:scale-[0.98] disabled:opacity-50 min-h-[48px] mt-2"
+              className="w-full flex items-center justify-center gap-2 rounded-xl bg-zinc-100 hover:bg-white text-zinc-950 font-bold text-sm py-3.5 px-4 shadow-sm transition-all active:scale-[0.98] disabled:opacity-50 min-h-[48px] mt-2"
             >
               {loading ? (
                 'Autenticando...'
@@ -193,14 +197,14 @@ function LoginForm() {
         )}
 
         {/* Quick Account Selector */}
-        <div className="pt-4 border-t border-slate-800/80 space-y-3">
+        <div className="pt-4 border-t border-zinc-800 space-y-3">
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
-              <Users className="h-3.5 w-3.5 text-indigo-400" />
+            <span className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider flex items-center gap-1.5">
+              <Users className="h-3.5 w-3.5 text-zinc-400" />
               Selecionar Conta de Colaborador
             </span>
-            <span className="text-[10px] text-amber-400 font-mono bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">
-              Exige senha individual
+            <span className="text-[10px] text-zinc-400 font-mono bg-zinc-800 px-2 py-0.5 rounded border border-zinc-700">
+              Exige senha
             </span>
           </div>
 
@@ -214,24 +218,24 @@ function LoginForm() {
                   onClick={() => handleSelectAccount(p)}
                   className={`flex items-center gap-2.5 p-2 rounded-lg border text-left transition-all group min-h-[44px] ${
                     isSelected
-                      ? 'bg-indigo-600/20 border-indigo-500 shadow-sm'
-                      : 'bg-slate-950/60 border-slate-800 hover:border-slate-700 hover:bg-slate-900/60'
+                      ? 'bg-zinc-800 border-zinc-600 shadow-sm'
+                      : 'bg-zinc-950 border-zinc-800 hover:border-zinc-700 hover:bg-zinc-900'
                   }`}
                 >
                   <img
                     src={p.avatar_url}
                     alt={p.nome}
                     className={`h-7 w-7 rounded-full object-cover shrink-0 ring-1 ${
-                      isSelected ? 'ring-indigo-400' : 'ring-slate-700'
+                      isSelected ? 'ring-zinc-400' : 'ring-zinc-700'
                     }`}
                   />
                   <div className="truncate">
                     <p className={`text-[11px] font-bold truncate ${
-                      isSelected ? 'text-indigo-300' : 'text-slate-200 group-hover:text-white'
+                      isSelected ? 'text-white' : 'text-zinc-300 group-hover:text-white'
                     }`}>
                       {p.nome.split(' ')[0]}
                     </p>
-                    <p className="text-[10px] text-slate-400 uppercase tracking-wide truncate">
+                    <p className="text-[10px] text-zinc-500 uppercase tracking-wide truncate">
                       {p.role}
                     </p>
                   </div>
@@ -241,7 +245,7 @@ function LoginForm() {
           </div>
 
           {selectedMemberName && (
-            <p className="text-[11px] text-indigo-300 bg-indigo-500/10 border border-indigo-500/20 px-3 py-1.5 rounded-lg text-center">
+            <p className="text-[11px] text-zinc-300 bg-zinc-800 border border-zinc-700 px-3 py-1.5 rounded-lg text-center">
               Conta de <strong>{selectedMemberName}</strong> selecionada. Digite a senha acima para prosseguir.
             </p>
           )}
@@ -249,9 +253,9 @@ function LoginForm() {
       </div>
 
       {/* Footer Info */}
-      <p className="text-center text-[11px] text-slate-500">
+      <p className="text-center text-[11px] text-zinc-500">
         Não tem acesso? Peça ao administrador para incluir seu e-mail em{' '}
-        <span className="text-slate-400 font-semibold">Configurações &gt; Equipe</span>.
+        <span className="text-zinc-400 font-semibold">Configurações &gt; Equipe</span>.
       </p>
     </div>
   );
@@ -259,9 +263,9 @@ function LoginForm() {
 
 export default function LoginView() {
   return (
-    <div className="min-h-screen w-full flex items-center justify-center bg-[#090d16] p-4 relative">
+    <div className="min-h-screen w-full flex items-center justify-center bg-zinc-950 p-4 relative">
       {/* Main Content wrapped in Suspense for useSearchParams */}
-      <Suspense fallback={<div className="text-slate-400 text-xs">Carregando portal de acesso...</div>}>
+      <Suspense fallback={<div className="text-zinc-500 text-xs">Carregando portal de acesso...</div>}>
         <LoginForm />
       </Suspense>
     </div>

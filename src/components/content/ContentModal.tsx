@@ -11,9 +11,11 @@ import {
   Plataforma,
   ClassificacaoConteudo,
   UsoTrafegoPago,
+  ContaTipo,
   DRIVE_PHYSICAL_STAGES,
   DRIVE_FOLDER_IDS,
 } from '@/types';
+import AccountBadge from '@/components/common/AccountBadge';
 import {
   X,
   Calendar,
@@ -285,14 +287,15 @@ Meta Máxima Digital - Sistema de Conteúdo & Performance`;
       role="dialog"
       aria-modal="true"
       aria-label="Detalhes do Conteúdo"
-      className="fixed inset-0 z-50 flex items-center justify-end bg-black/70 backdrop-blur-sm animate-in fade-in duration-200"
+      className="fixed inset-0 z-50 flex items-center justify-end bg-black/75 backdrop-blur-sm animate-in fade-in duration-200"
     >
-      <div className="flex h-full w-full max-w-4xl flex-col bg-[#0b0f19] border-l border-slate-800 shadow-2xl text-slate-100">
+      <div className="flex h-full w-full max-w-4xl flex-col bg-zinc-900 border-l border-zinc-800 shadow-2xl text-zinc-100">
         
         {/* Modal Top Header */}
-        <div className="flex items-center justify-between border-b border-slate-800 px-6 py-4 bg-slate-950/80 sticky top-0 z-20 backdrop-blur-md">
-          <div className="flex items-center gap-3">
-            <span className="text-xs font-semibold uppercase tracking-wider text-indigo-400 bg-indigo-500/10 px-2.5 py-1 rounded-md border border-indigo-500/20">
+        <div className="flex items-center justify-between border-b border-zinc-800 px-6 py-4 bg-zinc-950/80 sticky top-0 z-20 backdrop-blur-md">
+          <div className="flex items-center gap-2.5 flex-wrap">
+            <AccountBadge conta={formData.conta} tags={formData.tags} size="md" />
+            <span className="text-xs font-semibold uppercase tracking-wider text-zinc-300 bg-zinc-800 px-2.5 py-1 rounded-md border border-zinc-700">
               {formData.tipo?.replace('_', ' ')}
             </span>
             <span
@@ -301,7 +304,7 @@ Meta Máxima Digital - Sistema de Conteúdo & Performance`;
                   ? 'text-amber-300 bg-amber-500/15 border-amber-500/30'
                   : formData.classificacao === 'organico_patrocinado'
                   ? 'text-emerald-300 bg-emerald-500/15 border-emerald-500/30'
-                  : 'text-slate-300 bg-slate-800/80 border-slate-700'
+                  : 'text-zinc-300 bg-zinc-800/80 border-zinc-700'
               }`}
             >
               {formData.classificacao === 'patrocinado'
@@ -316,13 +319,13 @@ Meta Máxima Digital - Sistema de Conteúdo & Performance`;
                 Atrasado
               </span>
             )}
-            <span className="text-xs text-slate-400 font-mono hidden sm:inline">ID: {selectedPost.id}</span>
+            <span className="text-xs text-zinc-500 font-mono hidden sm:inline">ID: {selectedPost.id}</span>
           </div>
 
           <div className="flex items-center gap-2">
             <button
               onClick={handleShare}
-              className="flex items-center gap-1.5 rounded-md bg-slate-800 hover:bg-slate-700 px-3 py-1.5 text-xs font-semibold text-slate-200 hover:text-white transition-all active:scale-95 border border-slate-700"
+              className="flex items-center gap-1.5 rounded-md bg-zinc-800 hover:bg-zinc-750 px-3 py-1.5 text-xs font-semibold text-zinc-200 hover:text-white transition-all active:scale-95 border border-zinc-700"
               title="Compartilhar conteúdo"
             >
               {shareToast ? (
@@ -332,7 +335,7 @@ Meta Máxima Digital - Sistema de Conteúdo & Performance`;
                 </>
               ) : (
                 <>
-                  <Share2 className="h-3.5 w-3.5 text-indigo-400" />
+                  <Share2 className="h-3.5 w-3.5 text-zinc-300" />
                   <span>Compartilhar</span>
                 </>
               )}
@@ -340,11 +343,11 @@ Meta Máxima Digital - Sistema de Conteúdo & Performance`;
             <button
               onClick={handleSave}
               disabled={isSaving}
-              className="flex items-center gap-1.5 rounded-md bg-indigo-600 px-3.5 py-1.5 text-xs font-semibold text-white transition-all hover:bg-indigo-500 active:scale-95 disabled:opacity-50"
+              className="flex items-center gap-1.5 rounded-md bg-zinc-100 hover:bg-white text-zinc-950 px-3.5 py-1.5 text-xs font-bold transition-all active:scale-95 disabled:opacity-50"
             >
               {saveSuccess ? (
                 <>
-                  <Check className="h-3.5 w-3.5 text-emerald-300" />
+                  <Check className="h-3.5 w-3.5 text-emerald-600" />
                   Salvo!
                 </>
               ) : isSaving ? (
@@ -356,7 +359,7 @@ Meta Máxima Digital - Sistema de Conteúdo & Performance`;
             <button
               onClick={closePostModal}
               aria-label="Fechar painel de detalhes"
-              className="rounded-md p-1.5 text-slate-400 hover:bg-slate-800 hover:text-white transition-colors"
+              className="rounded-md p-1.5 text-zinc-400 hover:bg-zinc-800 hover:text-white transition-colors"
             >
               <X className="h-5 w-5" />
             </button>
@@ -364,92 +367,131 @@ Meta Máxima Digital - Sistema de Conteúdo & Performance`;
         </div>
 
         {/* Title & Quick Controls Bar */}
-        <div className="p-6 pb-3 border-b border-slate-800/80 bg-slate-950/40">
+        <div className="p-6 pb-3 border-b border-zinc-800/80 bg-zinc-950/40">
           <input
             type="text"
             value={formData.titulo || ''}
             onChange={(e) => handleInputChange('titulo', e.target.value)}
-            className="w-full bg-transparent text-xl font-bold text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-indigo-500/50 rounded px-1 -mx-1 py-1"
+            className="w-full bg-transparent text-xl font-bold text-zinc-100 placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500 rounded px-1 -mx-1 py-1"
             placeholder="Título do conteúdo..."
           />
 
-          <div className="mt-4 flex flex-wrap items-center gap-3 text-xs text-slate-400">
+          <div className="mt-4 flex flex-wrap items-center gap-3 text-xs text-zinc-400">
+            {/* Account Switcher */}
+            <div className="flex items-center gap-1 bg-zinc-900 px-2 py-1 rounded-md border border-zinc-800">
+              <span className="text-zinc-400 text-xs font-medium">Conta:</span>
+              <button
+                type="button"
+                onClick={() => {
+                  handleInputChange('conta', 'meta_maxima_digital');
+                  const tags = formData.tags || [];
+                  const updated = tags.filter((t) => !t.toLowerCase().includes('curso')).concat(['Meta Máxima Digital']);
+                  handleInputChange('tags', Array.from(new Set(updated)));
+                }}
+                className={`flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold transition-all ${
+                  (formData.conta || 'meta_maxima_digital') === 'meta_maxima_digital'
+                    ? 'bg-blue-950/90 text-blue-400 border border-blue-500/50'
+                    : 'text-zinc-400 hover:text-zinc-200'
+                }`}
+              >
+                <span className="h-1.5 w-1.5 rounded-full bg-blue-400" />
+                Digital
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  handleInputChange('conta', 'meta_maxima_cursos');
+                  const tags = formData.tags || [];
+                  const updated = tags.filter((t) => !t.toLowerCase().includes('digital')).concat(['Meta Máxima Cursos']);
+                  handleInputChange('tags', Array.from(new Set(updated)));
+                }}
+                className={`flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold transition-all ${
+                  formData.conta === 'meta_maxima_cursos'
+                    ? 'bg-emerald-950/90 text-emerald-400 border border-emerald-500/50'
+                    : 'text-zinc-400 hover:text-zinc-200'
+                }`}
+              >
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                Cursos
+              </button>
+            </div>
+
             {/* Status Selector */}
-            <div className="flex items-center gap-1.5 bg-slate-900 px-2.5 py-1.5 rounded-md border border-slate-800">
-              <span className="text-slate-400 font-medium">Status:</span>
+            <div className="flex items-center gap-1.5 bg-zinc-900 px-2.5 py-1.5 rounded-md border border-zinc-800">
+              <span className="text-zinc-400 font-medium">Status:</span>
               <select
                 value={formData.status || 'a_gravar'}
                 onChange={(e) => handleInputChange('status', e.target.value as PostStatus)}
-                className="bg-transparent text-slate-100 font-semibold focus:outline-none cursor-pointer"
+                className="bg-transparent text-zinc-100 font-semibold focus:outline-none cursor-pointer"
               >
-                <option value="ideias" className="bg-slate-900 text-slate-100">IDEIAS</option>
-                <option value="a_gravar" className="bg-slate-900 text-slate-100">A GRAVAR</option>
-                <option value="gravado" className="bg-slate-900 text-slate-100">GRAVADO</option>
-                <option value="a_editar" className="bg-slate-900 text-slate-100">A EDITAR</option>
-                <option value="editado" className="bg-slate-900 text-slate-100">EDITADO</option>
-                <option value="revisao" className="bg-slate-900 text-slate-100">EM REVISÃO</option>
-                <option value="aprovado" className="bg-slate-900 text-slate-100">APROVADO</option>
-                <option value="agendado" className="bg-slate-900 text-slate-100">AGENDADO</option>
-                <option value="postado" className="bg-slate-900 text-emerald-400">POSTADO</option>
+                <option value="ideias" className="bg-zinc-900 text-zinc-100">IDEIAS</option>
+                <option value="a_gravar" className="bg-zinc-900 text-zinc-100">A GRAVAR</option>
+                <option value="gravado" className="bg-zinc-900 text-zinc-100">GRAVADO</option>
+                <option value="a_editar" className="bg-zinc-900 text-zinc-100">A EDITAR</option>
+                <option value="editado" className="bg-zinc-900 text-zinc-100">EDITADO</option>
+                <option value="revisao" className="bg-zinc-900 text-zinc-100">EM REVISÃO</option>
+                <option value="aprovado" className="bg-zinc-900 text-zinc-100">APROVADO</option>
+                <option value="agendado" className="bg-zinc-900 text-zinc-100">AGENDADO</option>
+                <option value="postado" className="bg-zinc-900 text-emerald-400">POSTADO</option>
               </select>
             </div>
 
             {/* Funnel Stage Selector */}
-            <div className="flex items-center gap-1.5 bg-slate-900 px-2.5 py-1.5 rounded-md border border-slate-800">
-              <span className="text-slate-400 font-medium">Funil:</span>
+            <div className="flex items-center gap-1.5 bg-zinc-900 px-2.5 py-1.5 rounded-md border border-zinc-800">
+              <span className="text-zinc-400 font-medium">Funil:</span>
               <select
                 value={formData.etapa_funil || 'topo'}
                 onChange={(e) => handleInputChange('etapa_funil', e.target.value as EtapaFunil)}
-                className="bg-transparent text-slate-100 font-semibold focus:outline-none cursor-pointer uppercase"
+                className="bg-transparent text-zinc-100 font-semibold focus:outline-none cursor-pointer uppercase"
               >
-                <option value="topo" className="bg-slate-900 text-cyan-400">Topo (Atração)</option>
-                <option value="meio" className="bg-slate-900 text-indigo-400">Meio (Nutrição)</option>
-                <option value="fundo" className="bg-slate-900 text-emerald-400">Fundo (Conversão)</option>
+                <option value="topo" className="bg-zinc-900 text-cyan-400">Topo (Atração)</option>
+                <option value="meio" className="bg-zinc-900 text-blue-400">Meio (Nutrição)</option>
+                <option value="fundo" className="bg-zinc-900 text-emerald-400">Fundo (Conversão)</option>
               </select>
             </div>
 
             {/* Priority Selector */}
-            <div className="flex items-center gap-1.5 bg-slate-900 px-2.5 py-1.5 rounded-md border border-slate-800">
-              <span className="text-slate-400 font-medium">Prioridade:</span>
+            <div className="flex items-center gap-1.5 bg-zinc-900 px-2.5 py-1.5 rounded-md border border-zinc-800">
+              <span className="text-zinc-400 font-medium">Prioridade:</span>
               <select
                 value={formData.prioridade || 'normal'}
                 onChange={(e) => handleInputChange('prioridade', e.target.value as Prioridade)}
-                className="bg-transparent text-slate-100 font-semibold focus:outline-none cursor-pointer uppercase"
+                className="bg-transparent text-zinc-100 font-semibold focus:outline-none cursor-pointer uppercase"
               >
-                <option value="baixa" className="bg-slate-900 text-slate-400">Baixa</option>
-                <option value="normal" className="bg-slate-900 text-blue-400">Normal</option>
-                <option value="alta" className="bg-slate-900 text-amber-400">Alta</option>
-                <option value="urgente" className="bg-slate-900 text-rose-400">Urgente</option>
+                <option value="baixa" className="bg-zinc-900 text-zinc-400">Baixa</option>
+                <option value="normal" className="bg-zinc-900 text-blue-400">Normal</option>
+                <option value="alta" className="bg-zinc-900 text-amber-400">Alta</option>
+                <option value="urgente" className="bg-zinc-900 text-rose-400">Urgente</option>
               </select>
             </div>
 
             {/* Date & Time */}
-            <div className="flex items-center gap-1.5 bg-slate-900 px-2.5 py-1.5 rounded-md border border-slate-800">
-              <Calendar className="h-3.5 w-3.5 text-indigo-400" />
+            <div className="flex items-center gap-1.5 bg-zinc-900 px-2.5 py-1.5 rounded-md border border-zinc-800">
+              <Calendar className="h-3.5 w-3.5 text-zinc-400" />
               <input
                 type="date"
                 value={formData.data_publicacao || ''}
                 onChange={(e) => handleInputChange('data_publicacao', e.target.value)}
-                className="bg-transparent text-slate-100 font-medium focus:outline-none cursor-pointer"
+                className="bg-transparent text-zinc-100 font-medium focus:outline-none cursor-pointer"
               />
-              <Clock className="h-3.5 w-3.5 text-slate-400 ml-1" />
+              <Clock className="h-3.5 w-3.5 text-zinc-400 ml-1" />
               <input
                 type="time"
                 value={formData.hora_publicacao || '18:00'}
                 onChange={(e) => handleInputChange('hora_publicacao', e.target.value)}
-                className="bg-transparent text-slate-100 font-medium focus:outline-none cursor-pointer"
+                className="bg-transparent text-zinc-100 font-medium focus:outline-none cursor-pointer"
               />
             </div>
           </div>
 
-          {/* 7 Navigation Tabs */}
-          <div className="flex items-center gap-4 mt-6 border-b border-slate-800 text-xs font-semibold tracking-wide overflow-x-auto no-scrollbar">
+          {/* Navigation Tabs (Without Meta Ads) */}
+          <div className="flex items-center gap-4 mt-6 border-b border-zinc-800 text-xs font-semibold tracking-wide overflow-x-auto no-scrollbar">
             <button
               onClick={() => setCurrentTab('detalhes')}
               className={`flex items-center gap-1.5 pb-2.5 border-b-2 transition-colors whitespace-nowrap ${
                 currentTab === 'detalhes'
-                  ? 'border-indigo-500 text-indigo-400 font-bold'
-                  : 'border-transparent text-slate-400 hover:text-slate-200'
+                  ? 'border-zinc-100 text-zinc-100 font-bold'
+                  : 'border-transparent text-zinc-400 hover:text-zinc-200'
               }`}
             >
               <Layers className="h-3.5 w-3.5" />
@@ -459,8 +501,8 @@ Meta Máxima Digital - Sistema de Conteúdo & Performance`;
               onClick={() => setCurrentTab('roteiro')}
               className={`flex items-center gap-1.5 pb-2.5 border-b-2 transition-colors whitespace-nowrap ${
                 currentTab === 'roteiro'
-                  ? 'border-indigo-500 text-indigo-400 font-bold'
-                  : 'border-transparent text-slate-400 hover:text-slate-200'
+                  ? 'border-zinc-100 text-zinc-100 font-bold'
+                  : 'border-transparent text-zinc-400 hover:text-zinc-200'
               }`}
             >
               <FileText className="h-3.5 w-3.5" />
@@ -470,52 +512,41 @@ Meta Máxima Digital - Sistema de Conteúdo & Performance`;
               onClick={() => setCurrentTab('arquivos')}
               className={`flex items-center gap-1.5 pb-2.5 border-b-2 transition-colors whitespace-nowrap ${
                 currentTab === 'arquivos'
-                  ? 'border-indigo-500 text-indigo-400 font-bold'
-                  : 'border-transparent text-slate-400 hover:text-slate-200'
+                  ? 'border-zinc-100 text-zinc-100 font-bold'
+                  : 'border-transparent text-zinc-400 hover:text-zinc-200'
               }`}
             >
-              <GoogleDriveIcon className="h-3.5 w-3.5" />
-              ARQUIVOS & DRIVE ({postFiles.length})
+              <Folder className="h-3.5 w-3.5" />
+              ARQUIVOS ({postFiles.length})
             </button>
             <button
               onClick={() => setCurrentTab('publicacao')}
               className={`flex items-center gap-1.5 pb-2.5 border-b-2 transition-colors whitespace-nowrap ${
                 currentTab === 'publicacao'
-                  ? 'border-indigo-500 text-indigo-400 font-bold'
-                  : 'border-transparent text-slate-400 hover:text-slate-200'
+                  ? 'border-zinc-100 text-zinc-100 font-bold'
+                  : 'border-transparent text-zinc-400 hover:text-zinc-200'
               }`}
             >
               <Send className="h-3.5 w-3.5" />
-              PUBLICAÇÃO
-            </button>
-            <button
-              onClick={() => setCurrentTab('anuncios')}
-              className={`flex items-center gap-1.5 pb-2.5 border-b-2 transition-colors whitespace-nowrap ${
-                currentTab === 'anuncios'
-                  ? 'border-indigo-500 text-indigo-400 font-bold'
-                  : 'border-transparent text-slate-400 hover:text-slate-200'
-              }`}
-            >
-              <Megaphone className="h-3.5 w-3.5" />
-              ANÚNCIOS {linkedAd ? '• VINCULADO' : ''}
+              PUBLICAÇÃO & CHECKLIST
             </button>
             <button
               onClick={() => setCurrentTab('metricas')}
               className={`flex items-center gap-1.5 pb-2.5 border-b-2 transition-colors whitespace-nowrap ${
                 currentTab === 'metricas'
-                  ? 'border-indigo-500 text-indigo-400 font-bold'
-                  : 'border-transparent text-slate-400 hover:text-slate-200'
+                  ? 'border-zinc-100 text-zinc-100 font-bold'
+                  : 'border-transparent text-zinc-400 hover:text-zinc-200'
               }`}
             >
               <BarChart3 className="h-3.5 w-3.5" />
-              MÉTRICAS
+              MÉTRICAS DO CONTEÚDO
             </button>
             <button
               onClick={() => setCurrentTab('historico')}
               className={`flex items-center gap-1.5 pb-2.5 border-b-2 transition-colors whitespace-nowrap ${
                 currentTab === 'historico'
-                  ? 'border-indigo-500 text-indigo-400 font-bold'
-                  : 'border-transparent text-slate-400 hover:text-slate-200'
+                  ? 'border-zinc-100 text-zinc-100 font-bold'
+                  : 'border-transparent text-zinc-400 hover:text-zinc-200'
               }`}
             >
               <History className="h-3.5 w-3.5" />

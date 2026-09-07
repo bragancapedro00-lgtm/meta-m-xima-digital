@@ -161,6 +161,7 @@ const DEFAULT_FILTERS: FilterState = {
   prioridade: 'todos',
   plataforma: 'todos',
   tag: 'todos',
+  conta: 'todos',
 };
 
 const ContentContext = createContext<ContentContextType | undefined>(undefined);
@@ -1179,6 +1180,16 @@ export function ContentProvider({ children }: { children: ReactNode }) {
         }
       }
 
+      // Conta (Meta Máxima Digital vs Meta Máxima Cursos)
+      if (filters.conta && filters.conta !== 'todos') {
+        const matchesConta = p.conta === filters.conta;
+        const matchesTag =
+          filters.conta === 'meta_maxima_cursos'
+            ? p.tags?.some((t) => t.toLowerCase().includes('curso'))
+            : p.tags?.some((t) => t.toLowerCase().includes('digital'));
+        if (!matchesConta && !matchesTag) return false;
+      }
+
       return true;
     });
   }, [posts, filters]);
@@ -1446,6 +1457,12 @@ export function ContentProvider({ children }: { children: ReactNode }) {
   };
 
   const saveAIIdeaToIdeas = async (item: GeneratedIdeaItem): Promise<Ideia> => {
+    const isCursos =
+      brandContext.conta === 'meta_maxima_cursos' ||
+      brandContext.nome_empresa?.toLowerCase().includes('curso');
+    const conta = isCursos ? 'meta_maxima_cursos' : 'meta_maxima_digital';
+    const contaTag = isCursos ? 'Meta Máxima Cursos' : 'Meta Máxima Digital';
+
     const saved = await saveIdea({
       titulo: item.titulo,
       ideia: item.conceito,
@@ -1457,15 +1474,22 @@ export function ContentProvider({ children }: { children: ReactNode }) {
       observacoes: `Justificativa Estratégica: ${item.justificativa_estrategica}`,
       categoria: 'educacional',
       prioridade: 'normal',
-      tags: ['Gerado com IA', item.formato || 'IA'],
+      conta,
+      tags: [contaTag, 'Gerado com IA', item.formato || 'IA'],
     });
 
-    await addAuditLog('Ideia de IA Salva', 'IDEA', saved.id, saved.titulo, 'Ideia gerada pelo Gemini salva no Banco');
+    await addAuditLog('Ideia de IA Salva', 'IDEA', saved.id, saved.titulo, `Ideia para ${contaTag} salva no Banco`);
     return saved;
   };
 
   const saveAIScriptToPost = async (script: GeneratedScript, targetStatus: PostStatus = 'a_gravar'): Promise<Post> => {
     const today = new Date().toISOString().split('T')[0];
+    const isCursos =
+      brandContext.conta === 'meta_maxima_cursos' ||
+      brandContext.nome_empresa?.toLowerCase().includes('curso');
+    const conta = isCursos ? 'meta_maxima_cursos' : 'meta_maxima_digital';
+    const contaTag = isCursos ? 'Meta Máxima Cursos' : 'Meta Máxima Digital';
+
     const cenasText = script.cenas && script.cenas.length > 0
       ? script.cenas
           .map(
@@ -1485,15 +1509,22 @@ export function ContentProvider({ children }: { children: ReactNode }) {
       roteiro_prova: script.prova,
       cta: script.cta || script.cta_final,
       observacoes: `Duração Estimada: ${script.duracao}\n\nDetalhamento de Cenas:\n${cenasText}`,
-      tags: ['Roteiro IA', 'Gemini'],
+      conta,
+      tags: [contaTag, 'Roteiro IA', 'Gemini'],
     });
 
-    await addAuditLog('Roteiro de IA Salvo', 'POST', saved.id, saved.titulo, `Roteiro salvo como conteúdo em ${targetStatus}`);
+    await addAuditLog('Roteiro de IA Salvo', 'POST', saved.id, saved.titulo, `Roteiro para ${contaTag} salvo como conteúdo em ${targetStatus}`);
     return saved;
   };
 
   const saveAICarouselToPost = async (carousel: GeneratedCarousel): Promise<Post> => {
     const today = new Date().toISOString().split('T')[0];
+    const isCursos =
+      brandContext.conta === 'meta_maxima_cursos' ||
+      brandContext.nome_empresa?.toLowerCase().includes('curso');
+    const conta = isCursos ? 'meta_maxima_cursos' : 'meta_maxima_digital';
+    const contaTag = isCursos ? 'Meta Máxima Cursos' : 'Meta Máxima Digital';
+
     const slidesText = carousel.slides
       .map((s) => `[SLIDE ${s.slide_numero} - ${s.tipo.toUpperCase()}]\nTítulo: ${s.titulo}\nTexto: ${s.texto}\nVisual: ${s.sugestao_visual}`)
       .join('\n\n---\n\n');
@@ -1505,10 +1536,11 @@ export function ContentProvider({ children }: { children: ReactNode }) {
       tipo: 'carrossel',
       cta: carousel.cta_final,
       legenda: `Tema: ${carousel.tema}\n\n${slidesText}`,
-      tags: ['Carrossel IA', 'Gemini'],
+      conta,
+      tags: [contaTag, 'Carrossel IA', 'Gemini'],
     });
 
-    await addAuditLog('Carrossel de IA Salvo', 'POST', saved.id, saved.titulo, 'Carrossel estruturado salvo no Kanban');
+    await addAuditLog('Carrossel de IA Salvo', 'POST', saved.id, saved.titulo, `Carrossel para ${contaTag} salvo no Kanban`);
     return saved;
   };
 

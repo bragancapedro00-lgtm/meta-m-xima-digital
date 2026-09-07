@@ -148,6 +148,8 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<PerfilRole, PermissoesEquipe> = {
   },
 };
 
+export type ContaTipo = 'meta_maxima_digital' | 'meta_maxima_cursos';
+
 export interface Post {
   id: string;
   titulo: string;
@@ -160,6 +162,7 @@ export interface Post {
   plataforma: Plataforma;
   responsavel: string;
   cliente_projeto?: string;
+  conta?: ContaTipo; // 'meta_maxima_digital' (Azul) ou 'meta_maxima_cursos' (Verde)
   tags: string[];
   
   // Roteiro estruturado
@@ -257,6 +260,7 @@ export interface Ideia {
   prioridade: Prioridade;
   categoria: CategoriaIdeia;
   tags: string[];
+  conta?: ContaTipo; // 'meta_maxima_digital' (Azul) ou 'meta_maxima_cursos' (Verde)
   plataforma?: Plataforma;
   arquivado: boolean;
   post_id?: string;
@@ -552,6 +556,7 @@ export interface FilterState {
   prioridade: string; // 'todos' or specific Prioridade
   plataforma: string; // 'todos' or specific Plataforma
   tag: string; // 'todos' or specific tag
+  conta?: 'todos' | ContaTipo; // 'todos' | 'meta_maxima_digital' | 'meta_maxima_cursos'
   cliente_projeto?: string;
   classificacao?: string; // 'todos' | 'organico' | 'patrocinado' | 'organico_patrocinado'
   uso_trafego_pago?: string; // 'todos' | UsoTrafegoPago
@@ -575,6 +580,7 @@ export type AIToolType =
 
 export interface BrandContext {
   id?: string;
+  conta?: ContaTipo;
   nome_empresa: string;
   nicho: string;
   publico_alvo: string;

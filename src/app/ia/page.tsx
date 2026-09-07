@@ -34,9 +34,12 @@ import {
   FileSpreadsheet,
 } from 'lucide-react';
 import { useContent } from '@/lib/context/ContentContext';
+import { BRAND_PRESETS } from '@/lib/ai/gemini';
+import AccountBadge from '@/components/common/AccountBadge';
 import {
   AIToolType,
   BrandContext,
+  ContaTipo,
   GeneratedIdeaItem,
   GeneratedScript,
   GeneratedCaptionVersion,
@@ -73,6 +76,11 @@ export default function AssistenteIAPage() {
     saveAIAdToCreative,
   } = useContent();
 
+  // Selected Account for AI Training
+  const [selectedConta, setSelectedConta] = useState<ContaTipo>(
+    brandContext?.conta || 'meta_maxima_digital'
+  );
+
   // Active Tool & Navigation
   const [activeTool, setActiveTool] = useState<AIToolType>('ideias');
   const [isBrandDrawerOpen, setIsBrandDrawerOpen] = useState(false);
@@ -82,6 +90,35 @@ export default function AssistenteIAPage() {
   // Gemini API Status Check
   const [apiStatus, setApiStatus] = useState<ApiStatus | null>(null);
   const [checkingApi, setCheckingApi] = useState(true);
+
+  // Switch Brand Context & Training
+  const handleSwitchAccount = async (conta: ContaTipo) => {
+    setSelectedConta(conta);
+    const preset = BRAND_PRESETS[conta];
+    if (preset) {
+      await updateBrandContext(preset);
+      setEditableBrand(preset);
+      setIdeaForm((prev) => ({
+        ...prev,
+        nicho: preset.nicho,
+        publico: preset.publico_alvo,
+        produto_servico: preset.produtos,
+        tom_comunicacao: preset.tom_de_voz,
+      }));
+      setScriptForm((prev) => ({
+        ...prev,
+        publico: preset.publico_alvo,
+        tom_de_voz: preset.tom_de_voz,
+        produto_servico: preset.produtos,
+      }));
+      setCaptionForm((prev) => ({
+        ...prev,
+        publico: preset.publico_alvo,
+        tom: preset.tom_de_voz,
+        cta: preset.cta_padrao,
+      }));
+    }
+  };
 
   useEffect(() => {
     async function checkStatus() {
@@ -586,32 +623,32 @@ export default function AssistenteIAPage() {
     { id: 'roteiro', label: 'Criar roteiro', icon: Video, desc: 'Estrutura completa em 4 atos, cenas, cortes e falas', badge: 'Produção' },
     { id: 'legenda', label: 'Criar legenda', icon: FileText, desc: '3 versões persuasivas com ganchos e hashtags' },
     { id: 'carrossel', label: 'Criar carrossel', icon: Layers, desc: 'Slides didáticos de alta retenção com orientação visual' },
-    { id: 'anuncio', label: 'Criar anúncio', icon: Megaphone, desc: 'Foco Meta Ads com Headlines, Primary Text e variações', badge: 'Tráfego' },
+    { id: 'anuncio', label: 'Criar anúncio', icon: Megaphone, desc: 'Copy e criativos de alta conversão para captação e vendas', badge: 'Conversão' },
     { id: 'variacoes', label: 'Criar variações', icon: Repeat, desc: 'Novos ângulos, hooks e abordagens do mesmo conteúdo' },
     { id: 'melhorar', label: 'Melhorar conteúdo', icon: BrainCircuit, desc: 'Auditoria clínica: pontos fortes, fracos e versão 2.0' },
-    { id: 'performance', label: 'Analisar performance', icon: BarChart3, desc: 'Diagnóstico com dados reais de Meta Ads e redes', badge: 'Dados Reais' },
+    { id: 'performance', label: 'Analisar performance', icon: BarChart3, desc: 'Diagnóstico analítico de engajamento e métricas de conteúdo', badge: 'Relatórios' },
     { id: 'estrategia', label: 'Gerar estratégia', icon: Rocket, desc: 'Pilares, calendário e distribuição tática de funil' },
     { id: 'chat', label: 'Assistente livre', icon: MessageSquare, desc: 'Conversação contínua com contexto total da marca' },
   ];
 
   return (
-    <div className="flex-1 h-full overflow-y-auto bg-[#090d16] text-slate-100 p-4 sm:p-6 lg:p-8 space-y-6">
+    <div className="flex-1 h-full overflow-y-auto bg-zinc-950 text-zinc-100 p-4 sm:p-6 lg:p-8 space-y-6">
       {/* Top Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-800/80 pb-6">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-zinc-800/80 pb-6">
         <div>
           <div className="flex items-center gap-3 mb-1.5">
-            <div className="p-2.5 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-700 text-white shadow-lg shadow-blue-500/20">
-              <Sparkles className="w-6 h-6" />
+            <div className="p-2.5 rounded-xl bg-zinc-800 border border-zinc-700 text-white shadow-lg">
+              <Sparkles className="w-6 h-6 text-zinc-200" />
             </div>
             <div>
               <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white flex items-center gap-2.5">
                 Assistente de IA
-                <span className="text-xs px-2.5 py-0.5 rounded-full bg-blue-500/15 text-blue-400 border border-blue-500/30 font-medium">
+                <span className="text-xs px-2.5 py-0.5 rounded-full bg-zinc-800 text-zinc-300 border border-zinc-700 font-medium">
                   Google Gemini
                 </span>
               </h1>
-              <p className="text-sm text-slate-400 mt-0.5">
-                Crie, planeje e otimize seus conteúdos com inteligência artificial.
+              <p className="text-sm text-zinc-400 mt-0.5">
+                Crie, planeje e otimize seus conteúdos com inteligência artificial especializada.
               </p>
             </div>
           </div>
@@ -621,11 +658,57 @@ export default function AssistenteIAPage() {
         <div className="flex items-center gap-3">
           <button
             onClick={() => setIsBrandDrawerOpen(!isBrandDrawerOpen)}
-            className="flex items-center gap-2 px-3.5 py-2 rounded-lg bg-slate-800/90 hover:bg-slate-700/90 border border-slate-700 text-xs font-semibold text-slate-200 transition-colors shadow-sm"
+            className="flex items-center gap-2 px-3.5 py-2 rounded-lg bg-zinc-900 hover:bg-zinc-800 border border-zinc-750 text-xs font-semibold text-zinc-200 transition-colors shadow-sm"
           >
-            <Settings2 className="w-4 h-4 text-blue-400" />
-            <span>Contexto da Marca</span>
+            <Settings2 className="w-4 h-4 text-zinc-300" />
+            <span>Diretrizes da Marca</span>
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+          </button>
+        </div>
+      </div>
+
+      {/* Account Selector Card */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-xl bg-zinc-900 border border-zinc-800 shadow-sm">
+        <div className="flex items-center gap-3">
+          <div className="flex flex-col">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-zinc-400">
+              Conta Ativa para Treinamento da IA:
+            </span>
+            <div className="flex items-center gap-2 mt-1">
+              <AccountBadge conta={selectedConta} size="md" />
+              <span className="text-xs text-zinc-400">
+                {selectedConta === 'meta_maxima_cursos'
+                  ? '• Treinada para Cursos Profissionais, Aceleração de Carreiras & Matrículas'
+                  : '• Treinada para Agência de Marketing, Aquisição B2B & ROI Previsível'}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 shrink-0">
+          <button
+            type="button"
+            onClick={() => handleSwitchAccount('meta_maxima_digital')}
+            className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-bold transition-all ${
+              selectedConta === 'meta_maxima_digital'
+                ? 'bg-blue-950 text-blue-400 border border-blue-500 shadow-[0_0_12px_rgba(59,130,246,0.3)]'
+                : 'bg-zinc-800/80 text-zinc-400 border border-zinc-750 hover:text-zinc-200 hover:border-zinc-700'
+            }`}
+          >
+            <span className="h-2 w-2 rounded-full bg-blue-400" />
+            Meta Máxima Digital (Azul)
+          </button>
+          <button
+            type="button"
+            onClick={() => handleSwitchAccount('meta_maxima_cursos')}
+            className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-bold transition-all ${
+              selectedConta === 'meta_maxima_cursos'
+                ? 'bg-emerald-950 text-emerald-400 border border-emerald-500 shadow-[0_0_12px_rgba(16,185,129,0.3)]'
+                : 'bg-zinc-800/80 text-zinc-400 border border-zinc-750 hover:text-zinc-200 hover:border-zinc-700'
+            }`}
+          >
+            <span className="h-2 w-2 rounded-full bg-emerald-400" />
+            Meta Máxima Cursos (Verde)
           </button>
         </div>
       </div>

@@ -77,7 +77,7 @@ export async function POST(request: NextRequest) {
         break;
 
       case 'melhorar':
-        result = await generateImproveContent(input as any, brandContext);
+        result = await improveContent(input as any, brandContext);
         break;
 
       case 'performance':

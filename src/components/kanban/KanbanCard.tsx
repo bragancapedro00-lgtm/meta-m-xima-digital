@@ -21,6 +21,7 @@ import {
   UploadCloud,
 } from 'lucide-react';
 import { GoogleDriveIcon } from '@/components/icons/BrandIcons';
+import AccountBadge from '@/components/common/AccountBadge';
 
 interface KanbanCardProps {
   post: Post;
@@ -107,24 +108,34 @@ export default function KanbanCard({ post }: KanbanCardProps) {
       draggable={canMove}
       onDragStart={handleDragStart}
       onClick={() => openPostModal(post, 'detalhes')}
-      className={`group relative rounded-xl border bg-slate-900/90 p-3.5 shadow-sm transition-all duration-150 hover:border-slate-600/80 hover:shadow-md hover:translate-y-[-1px] ${
+      className={`group relative rounded-xl border bg-zinc-900/90 p-3.5 shadow-sm transition-all duration-150 hover:border-zinc-600/80 hover:shadow-md hover:translate-y-[-1px] ${
         canMove ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer'
       } select-none ${
         overdue
-          ? 'border-rose-900/60 bg-gradient-to-b from-rose-950/20 to-slate-900/90'
-          : 'border-slate-800'
+          ? 'border-rose-900/60 bg-gradient-to-b from-rose-950/20 to-zinc-900/90'
+          : 'border-zinc-800'
       }`}
     >
+      {/* Account Tag Badge (Verde para Cursos, Azul para Digital) */}
+      <div className="flex items-center justify-between gap-1.5 mb-2.5">
+        <AccountBadge conta={post.conta} tags={post.tags} />
+        {post.cliente_projeto && (
+          <span className="text-[10px] text-zinc-400 font-medium truncate max-w-[110px]">
+            {post.cliente_projeto}
+          </span>
+        )}
+      </div>
+
       {/* Thumbnail preview if present */}
       {post.thumbnail_url && (
-        <div className="relative mb-3 h-28 w-full overflow-hidden rounded-lg bg-slate-950">
+        <div className="relative mb-3 h-28 w-full overflow-hidden rounded-lg bg-zinc-950">
           <img
             src={post.thumbnail_url}
             alt={post.titulo}
             className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
           />
           <div className="absolute top-2 left-2 flex gap-1.5">
-            <span className="flex items-center gap-1 rounded bg-black/75 px-1.5 py-0.5 text-[10px] font-semibold text-slate-200 backdrop-blur-sm">
+            <span className="flex items-center gap-1 rounded bg-black/75 px-1.5 py-0.5 text-[10px] font-semibold text-zinc-200 backdrop-blur-sm">
               <TypeIcon className="h-3 w-3" />
               {typeInfo.label}
             </span>

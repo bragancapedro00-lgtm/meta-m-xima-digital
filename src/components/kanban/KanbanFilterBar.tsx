@@ -35,24 +35,24 @@ export default function KanbanFilterBar() {
     filters.plataforma !== 'todos';
 
   return (
-    <div className="flex flex-col gap-3 p-4 border-b border-slate-800/80 bg-slate-950/40 shrink-0">
+    <div className="flex flex-col gap-3 p-4 border-b border-zinc-800/80 bg-zinc-950/80 shrink-0">
       
       {/* Top Row: Search & Action Buttons */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         {/* Search input */}
         <div className="relative flex-1 min-w-[240px] max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400" />
           <input
             type="text"
             value={filters.search}
             onChange={(e) => setFilters((prev) => ({ ...prev, search: e.target.value }))}
             placeholder="Buscar conteúdos por título, gancho, tag..."
-            className="w-full rounded-lg bg-slate-900 border border-slate-800 pl-9 pr-3.5 py-1.5 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+            className="w-full rounded-lg bg-zinc-900 border border-zinc-800 pl-9 pr-3.5 py-1.5 text-xs text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
           />
           {filters.search && (
             <button
               onClick={() => setFilters((prev) => ({ ...prev, search: '' }))}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white text-xs"
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-white text-xs"
             >
               &times;
             </button>
@@ -83,25 +83,67 @@ export default function KanbanFilterBar() {
 
           <button
             onClick={openNewIdeaModal}
-            className="flex items-center gap-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 px-3 py-1.5 text-xs font-semibold text-violet-300 transition-all active:scale-95"
+            className="flex items-center gap-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 px-3 py-1.5 text-xs font-semibold text-zinc-200 transition-all active:scale-95"
           >
-            <Lightbulb className="h-3.5 w-3.5 text-violet-400" />
+            <Lightbulb className="h-3.5 w-3.5 text-amber-400" />
             <span>+ Nova Ideia</span>
           </button>
 
           <button
             onClick={() => openNewPostModal('a_gravar')}
-            className="flex items-center gap-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 px-3.5 py-1.5 text-xs font-semibold text-white shadow-sm shadow-indigo-600/30 transition-all active:scale-95"
+            className="flex items-center gap-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 border border-zinc-600 px-3.5 py-1.5 text-xs font-semibold text-white shadow-sm transition-all active:scale-95"
           >
-            <Plus className="h-3.5 w-3.5" />
+            <Plus className="h-3.5 w-3.5 text-blue-400" />
             <span>+ Novo Conteúdo</span>
           </button>
         </div>
       </div>
 
+      {/* Middle Row: Account Filter Pills */}
+      <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-zinc-800/60">
+        <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider mr-1">
+          Conta:
+        </span>
+        <button
+          type="button"
+          onClick={() => setFilters((prev) => ({ ...prev, conta: 'todos' }))}
+          className={`px-3 py-1 rounded-full text-xs font-medium transition-all ${
+            !filters.conta || filters.conta === 'todos'
+              ? 'bg-zinc-800 text-white border border-zinc-600 font-semibold shadow-sm'
+              : 'bg-zinc-900/60 text-zinc-400 border border-zinc-800 hover:text-zinc-200'
+          }`}
+        >
+          Todas as Contas
+        </button>
+        <button
+          type="button"
+          onClick={() => setFilters((prev) => ({ ...prev, conta: 'meta_maxima_digital' }))}
+          className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium transition-all ${
+            filters.conta === 'meta_maxima_digital'
+              ? 'bg-blue-950 text-blue-300 border border-blue-500 font-semibold shadow-sm'
+              : 'bg-zinc-900/60 text-zinc-400 border border-zinc-800 hover:text-blue-300'
+          }`}
+        >
+          <span className="h-2 w-2 rounded-full bg-blue-400" />
+          <span>Meta Máxima Digital (Azul)</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => setFilters((prev) => ({ ...prev, conta: 'meta_maxima_cursos' }))}
+          className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium transition-all ${
+            filters.conta === 'meta_maxima_cursos'
+              ? 'bg-emerald-950 text-emerald-300 border border-emerald-500 font-semibold shadow-sm'
+              : 'bg-zinc-900/60 text-zinc-400 border border-zinc-800 hover:text-emerald-300'
+          }`}
+        >
+          <span className="h-2 w-2 rounded-full bg-emerald-400" />
+          <span>Meta Máxima Cursos (Verde)</span>
+        </button>
+      </div>
+
       {/* Bottom Row: Filter Dropdowns */}
       <div className="flex flex-wrap items-center gap-2 text-xs">
-        <div className="flex items-center gap-1.5 text-slate-400 font-semibold uppercase tracking-wider text-[10px] mr-1">
+        <div className="flex items-center gap-1.5 text-zinc-400 font-semibold uppercase tracking-wider text-[10px] mr-1">
           <Filter className="h-3 w-3" />
           Filtros:
         </div>
@@ -110,7 +152,7 @@ export default function KanbanFilterBar() {
         <select
           value={filters.periodo}
           onChange={(e) => setFilters((prev) => ({ ...prev, periodo: e.target.value as any }))}
-          className="rounded-md bg-slate-900 border border-slate-800 px-2.5 py-1 text-slate-300 focus:outline-none focus:border-indigo-500"
+          className="rounded-md bg-zinc-900 border border-zinc-800 px-2.5 py-1 text-zinc-300 focus:outline-none focus:border-blue-500"
         >
           <option value="todos">Período: Todos</option>
           <option value="7dias">Próximos 7 dias</option>
@@ -122,7 +164,7 @@ export default function KanbanFilterBar() {
         <select
           value={filters.tipo}
           onChange={(e) => setFilters((prev) => ({ ...prev, tipo: e.target.value }))}
-          className="rounded-md bg-slate-900 border border-slate-800 px-2.5 py-1 text-slate-300 focus:outline-none focus:border-indigo-500"
+          className="rounded-md bg-zinc-900 border border-zinc-800 px-2.5 py-1 text-zinc-300 focus:outline-none focus:border-blue-500"
         >
           <option value="todos">Tipo: Todos</option>
           <option value="reels_video">Reels / Vídeo</option>
@@ -137,7 +179,7 @@ export default function KanbanFilterBar() {
         <select
           value={filters.funil}
           onChange={(e) => setFilters((prev) => ({ ...prev, funil: e.target.value }))}
-          className="rounded-md bg-slate-900 border border-slate-800 px-2.5 py-1 text-slate-300 focus:outline-none focus:border-indigo-500 uppercase"
+          className="rounded-md bg-zinc-900 border border-zinc-800 px-2.5 py-1 text-zinc-300 focus:outline-none focus:border-blue-500 uppercase"
         >
           <option value="todos">Funil: Todos</option>
           <option value="topo">Topo</option>

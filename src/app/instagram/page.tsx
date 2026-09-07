@@ -1,10 +1,5 @@
-import InstagramView from '@/components/instagram/InstagramView';
-
-export const metadata = {
-  title: 'Instagram Insights | Meta Máxima Digital',
-  description: 'Métricas oficiais da Meta Graph API para a conta corporativa.',
-};
+import { redirect } from 'next/navigation';
 
 export default function InstagramPage() {
-  return <InstagramView />;
+  redirect('/relatorios');
 }

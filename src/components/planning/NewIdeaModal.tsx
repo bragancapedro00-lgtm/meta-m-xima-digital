@@ -2,12 +2,15 @@
 
 import React, { useState } from 'react';
 import { useContent } from '@/lib/context/ContentContext';
-import { CategoriaIdeia, EtapaFunil, Prioridade } from '@/types';
+import { CategoriaIdeia, EtapaFunil, Prioridade, ContaTipo } from '@/types';
 import { X, Lightbulb } from 'lucide-react';
 
 export default function NewIdeaModal() {
-  const { isNewIdeaModalOpen, closeNewIdeaModal, saveIdea, profiles, currentUser } = useContent();
+  const { isNewIdeaModalOpen, closeNewIdeaModal, saveIdea, profiles, currentUser, filters } = useContent();
 
+  const [conta, setConta] = useState<ContaTipo>(
+    filters.conta && filters.conta !== 'todos' ? filters.conta : 'meta_maxima_digital'
+  );
   const [titulo, setTitulo] = useState('');
   const [ideia, setIdeia] = useState('');
   const [gancho, setGancho] = useState('');
@@ -23,6 +26,12 @@ export default function NewIdeaModal() {
   const [tagsInput, setTagsInput] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  React.useEffect(() => {
+    if (isNewIdeaModalOpen && filters.conta && filters.conta !== 'todos') {
+      setConta(filters.conta);
+    }
+  }, [isNewIdeaModalOpen, filters.conta]);
+
   if (!isNewIdeaModalOpen) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -36,7 +45,13 @@ export default function NewIdeaModal() {
         .map((t) => t.trim())
         .filter(Boolean);
 
+      const accountTag = conta === 'meta_maxima_cursos' ? 'Meta Máxima Cursos' : 'Meta Máxima Digital';
+      if (!parsedTags.includes(accountTag)) {
+        parsedTags.push(accountTag);
+      }
+
       await saveIdea({
+        conta,
         titulo: titulo.trim(),
         ideia: ideia.trim(),
         gancho: gancho.trim(),
@@ -72,25 +87,25 @@ export default function NewIdeaModal() {
       role="dialog"
       aria-modal="true"
       aria-label="Nova Ideia Estratégica"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/65 backdrop-blur-sm p-4 animate-in fade-in duration-200"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4 animate-in fade-in duration-200"
     >
-      <div className="w-full max-w-xl rounded-xl bg-slate-900 border border-slate-800 shadow-2xl overflow-hidden text-slate-100">
+      <div className="w-full max-w-xl rounded-xl bg-zinc-900 border border-zinc-800 shadow-2xl overflow-hidden text-zinc-100">
         
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-slate-800 px-6 py-4 bg-slate-950/40">
+        <div className="flex items-center justify-between border-b border-zinc-800 px-6 py-4 bg-zinc-950/60">
           <div className="flex items-center gap-2">
-            <div className="p-1.5 bg-violet-500/15 rounded-md text-violet-400">
+            <div className="p-1.5 bg-zinc-800 rounded-md text-zinc-300">
               <Lightbulb className="h-4 w-4" />
             </div>
             <div>
-              <h3 className="text-base font-bold text-slate-100">Nova Ideia Estratégica</h3>
-              <p className="text-xs text-slate-400">Adicionar ao Banco de Ideias da agência</p>
+              <h3 className="text-base font-bold text-white">Nova Ideia Estratégica</h3>
+              <p className="text-xs text-zinc-400">Adicionar ao Banco de Ideias</p>
             </div>
           </div>
           <button
             onClick={closeNewIdeaModal}
             aria-label="Fechar modal"
-            className="rounded-md p-1.5 text-slate-400 hover:bg-slate-800 hover:text-white transition-colors"
+            className="rounded-md p-1.5 text-zinc-400 hover:bg-zinc-800 hover:text-white transition-colors"
           >
             <X className="h-5 w-5" />
           </button>
@@ -98,10 +113,43 @@ export default function NewIdeaModal() {
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="p-6 space-y-4 max-h-[80vh] overflow-y-auto">
+          {/* Seleção de Conta */}
+          <div>
+            <label className="block text-xs font-semibold text-zinc-300 uppercase tracking-wider mb-2">
+              Conta / Marca *
+            </label>
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                type="button"
+                onClick={() => setConta('meta_maxima_digital')}
+                className={`flex items-center justify-center gap-2 p-2.5 rounded-lg border text-xs font-bold transition-all ${
+                  conta === 'meta_maxima_digital'
+                    ? 'bg-blue-950/80 border-blue-500 text-blue-300 shadow-[0_0_12px_rgba(59,130,246,0.3)]'
+                    : 'bg-zinc-900 border-zinc-800 text-zinc-400 hover:border-zinc-700'
+                }`}
+              >
+                <span className="h-2 w-2 rounded-full bg-blue-400" />
+                Meta Máxima Digital (Azul)
+              </button>
+              <button
+                type="button"
+                onClick={() => setConta('meta_maxima_cursos')}
+                className={`flex items-center justify-center gap-2 p-2.5 rounded-lg border text-xs font-bold transition-all ${
+                  conta === 'meta_maxima_cursos'
+                    ? 'bg-emerald-950/80 border-emerald-500 text-emerald-300 shadow-[0_0_12px_rgba(16,185,129,0.3)]'
+                    : 'bg-zinc-900 border-zinc-800 text-zinc-400 hover:border-zinc-700'
+                }`}
+              >
+                <span className="h-2 w-2 rounded-full bg-emerald-400" />
+                Meta Máxima Cursos (Verde)
+              </button>
+            </div>
+          </div>
+
           {/* Título & Categoria */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div className="sm:col-span-2">
-              <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
+              <label className="block text-xs font-semibold text-zinc-300 uppercase tracking-wider mb-1.5">
                 Título / Tema Central *
               </label>
               <input
@@ -110,18 +158,18 @@ export default function NewIdeaModal() {
                 value={titulo}
                 onChange={(e) => setTitulo(e.target.value)}
                 placeholder="Ex: 5 erros que fazem perder clientes no Instagram"
-                className="w-full rounded-md bg-slate-800/80 border border-slate-700/80 px-3.5 py-2 text-sm text-slate-100 focus:outline-none focus:border-violet-500"
+                className="w-full rounded-md bg-zinc-800/80 border border-zinc-750 px-3.5 py-2 text-sm text-zinc-100 focus:outline-none focus:border-zinc-500"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
+              <label className="block text-xs font-semibold text-zinc-300 uppercase tracking-wider mb-1.5">
                 Categoria
               </label>
               <select
                 value={categoria}
                 onChange={(e) => setCategoria(e.target.value as CategoriaIdeia)}
-                className="w-full rounded-md bg-slate-800/80 border border-slate-700/80 px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-violet-500"
+                className="w-full rounded-md bg-zinc-800/80 border border-zinc-750 px-3 py-2 text-sm text-zinc-100 focus:outline-none focus:border-zinc-500"
               >
                 <option value="educacional">Educacional</option>
                 <option value="autoridade">Autoridade</option>
@@ -137,7 +185,7 @@ export default function NewIdeaModal() {
 
           {/* Ideia Descrição */}
           <div>
-            <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
+            <label className="block text-xs font-semibold text-zinc-300 uppercase tracking-wider mb-1.5">
               Ideia Detalhada *
             </label>
             <textarea
@@ -146,13 +194,13 @@ export default function NewIdeaModal() {
               value={ideia}
               onChange={(e) => setIdeia(e.target.value)}
               placeholder="Explique o conceito central, abordagem e por que este conteúdo vale a pena produzir..."
-              className="w-full rounded-md bg-slate-800/80 border border-slate-700/80 p-3 text-sm text-slate-100 focus:outline-none focus:border-violet-500"
+              className="w-full rounded-md bg-zinc-800/80 border border-zinc-750 p-3 text-sm text-zinc-100 focus:outline-none focus:border-zinc-500"
             />
           </div>
 
           {/* Gancho */}
           <div>
-            <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
+            <label className="block text-xs font-semibold text-zinc-300 uppercase tracking-wider mb-1.5">
               Gancho / Hook (Primeiros 3 segundos)
             </label>
             <input
@@ -160,14 +208,14 @@ export default function NewIdeaModal() {
               value={gancho}
               onChange={(e) => setGancho(e.target.value)}
               placeholder="Ex: Se sua empresa faz isso no Instagram, você provavelmente está perdendo vendas..."
-              className="w-full rounded-md bg-slate-800/80 border border-slate-700/80 px-3.5 py-2 text-sm text-slate-100 focus:outline-none focus:border-violet-500"
+              className="w-full rounded-md bg-zinc-800/80 border border-zinc-750 px-3.5 py-2 text-sm text-zinc-100 focus:outline-none focus:border-zinc-500"
             />
           </div>
 
           {/* Grid: Objetivo & Público */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
+              <label className="block text-xs font-semibold text-zinc-300 uppercase tracking-wider mb-1.5">
                 Objetivo
               </label>
               <input
@@ -175,12 +223,12 @@ export default function NewIdeaModal() {
                 value={objetivo}
                 onChange={(e) => setObjetivo(e.target.value)}
                 placeholder="Ex: Gerar autoridade e retenção"
-                className="w-full rounded-md bg-slate-800/80 border border-slate-700/80 px-3.5 py-2 text-sm text-slate-100 focus:outline-none focus:border-violet-500"
+                className="w-full rounded-md bg-zinc-800/80 border border-zinc-750 px-3.5 py-2 text-sm text-zinc-100 focus:outline-none focus:border-zinc-500"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
+              <label className="block text-xs font-semibold text-zinc-300 uppercase tracking-wider mb-1.5">
                 Público-Alvo
               </label>
               <input
@@ -188,7 +236,7 @@ export default function NewIdeaModal() {
                 value={publico}
                 onChange={(e) => setPublico(e.target.value)}
                 placeholder="Ex: Empresários e gestores"
-                className="w-full rounded-md bg-slate-800/80 border border-slate-700/80 px-3.5 py-2 text-sm text-slate-100 focus:outline-none focus:border-violet-500"
+                className="w-full rounded-md bg-zinc-800/80 border border-zinc-750 px-3.5 py-2 text-sm text-zinc-100 focus:outline-none focus:border-zinc-500"
               />
             </div>
           </div>
@@ -196,13 +244,13 @@ export default function NewIdeaModal() {
           {/* Grid: Funil, Formato, Prioridade */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
+              <label className="block text-xs font-semibold text-zinc-300 uppercase tracking-wider mb-1.5">
                 Funil
               </label>
               <select
                 value={etapaFunil}
                 onChange={(e) => setEtapaFunil(e.target.value as EtapaFunil)}
-                className="w-full rounded-md bg-slate-800/80 border border-slate-700/80 px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-violet-500"
+                className="w-full rounded-md bg-zinc-800/80 border border-zinc-750 px-3 py-2 text-sm text-zinc-100 focus:outline-none focus:border-zinc-500"
               >
                 <option value="topo">Topo</option>
                 <option value="meio">Meio</option>
@@ -211,13 +259,13 @@ export default function NewIdeaModal() {
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
+              <label className="block text-xs font-semibold text-zinc-300 uppercase tracking-wider mb-1.5">
                 Formato
               </label>
               <select
                 value={formato}
                 onChange={(e) => setFormato(e.target.value)}
-                className="w-full rounded-md bg-slate-800/80 border border-slate-700/80 px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-violet-500"
+                className="w-full rounded-md bg-zinc-800/80 border border-zinc-750 px-3 py-2 text-sm text-zinc-100 focus:outline-none focus:border-zinc-500"
               >
                 <option value="Reels/Vídeo">Reels / Vídeo</option>
                 <option value="Carrossel">Carrossel</option>
@@ -227,13 +275,13 @@ export default function NewIdeaModal() {
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
+              <label className="block text-xs font-semibold text-zinc-300 uppercase tracking-wider mb-1.5">
                 Prioridade
               </label>
               <select
                 value={prioridade}
                 onChange={(e) => setPrioridade(e.target.value as Prioridade)}
-                className="w-full rounded-md bg-slate-800/80 border border-slate-700/80 px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-violet-500"
+                className="w-full rounded-md bg-zinc-800/80 border border-zinc-750 px-3 py-2 text-sm text-zinc-100 focus:outline-none focus:border-zinc-500"
               >
                 <option value="baixa">Baixa</option>
                 <option value="normal">Normal</option>
@@ -246,7 +294,7 @@ export default function NewIdeaModal() {
           {/* CTA & Referência */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
+              <label className="block text-xs font-semibold text-zinc-300 uppercase tracking-wider mb-1.5">
                 CTA Sugerida
               </label>
               <input
@@ -254,12 +302,12 @@ export default function NewIdeaModal() {
                 value={cta}
                 onChange={(e) => setCta(e.target.value)}
                 placeholder="Ex: Salve este conteúdo."
-                className="w-full rounded-md bg-slate-800/80 border border-slate-700/80 px-3.5 py-2 text-sm text-slate-100 focus:outline-none focus:border-violet-500"
+                className="w-full rounded-md bg-zinc-800/80 border border-zinc-750 px-3.5 py-2 text-sm text-zinc-100 focus:outline-none focus:border-zinc-500"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
+              <label className="block text-xs font-semibold text-zinc-300 uppercase tracking-wider mb-1.5">
                 Link ou Referência
               </label>
               <input
@@ -267,24 +315,24 @@ export default function NewIdeaModal() {
                 value={referencia}
                 onChange={(e) => setReferencia(e.target.value)}
                 placeholder="Ex: @perfil_referencia no Instagram"
-                className="w-full rounded-md bg-slate-800/80 border border-slate-700/80 px-3.5 py-2 text-sm text-slate-100 focus:outline-none focus:border-violet-500"
+                className="w-full rounded-md bg-zinc-800/80 border border-zinc-750 px-3.5 py-2 text-sm text-zinc-100 focus:outline-none focus:border-zinc-500"
               />
             </div>
           </div>
 
           {/* Footer Buttons */}
-          <div className="pt-4 border-t border-slate-800 flex items-center justify-end gap-3">
+          <div className="pt-4 border-t border-zinc-800 flex items-center justify-end gap-3">
             <button
               type="button"
               onClick={closeNewIdeaModal}
-              className="px-4 py-2 text-sm font-medium text-slate-300 hover:text-white transition-colors"
+              className="px-4 py-2 text-sm font-medium text-zinc-400 hover:text-white transition-colors"
             >
               Cancelar
             </button>
             <button
               type="submit"
               disabled={isSubmitting}
-              className="rounded-md bg-violet-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-violet-500 focus:outline-none transition-all active:scale-95 disabled:opacity-50"
+              className="rounded-md bg-zinc-100 px-5 py-2 text-sm font-bold text-zinc-950 shadow-sm hover:bg-white focus:outline-none transition-all active:scale-95 disabled:opacity-50"
             >
               {isSubmitting ? 'Salvando...' : '+ Salvar no Banco de Ideias'}
             </button>

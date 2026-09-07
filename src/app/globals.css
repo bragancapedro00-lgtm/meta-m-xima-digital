@@ -1,16 +1,17 @@
 @import "tailwindcss";
 
 :root {
-  --background: #090d16;
-  --foreground: #f8fafc;
-  --surface-card: #0f172a;
-  --surface-hover: #1e293b;
-  --surface-border: #1e293b;
-  --surface-border-subtle: #334155;
-  --text-muted: #64748b;
-  --text-secondary: #94a3b8;
+  --background: #09090b; /* Pure SaaS Black (zinc-950) */
+  --foreground: #f4f4f5; /* Crisp Zinc-100 */
+  --surface-card: #121215; /* Sleek dark card */
+  --surface-hover: #18181b; /* Zinc-900 */
+  --surface-border: #27272a; /* Zinc-800 border */
+  --surface-border-subtle: #3f3f46; /* Zinc-700 subtle */
+  --text-muted: #71717a; /* Zinc-500 */
+  --text-secondary: #a1a1aa; /* Zinc-400 */
   --accent-indigo: #6366f1;
   --accent-emerald: #10b981;
+  --accent-blue: #3b82f6;
   --accent-amber: #f59e0b;
   --accent-rose: #f43f5e;
   --accent-cyan: #06b6d4;
@@ -40,16 +41,16 @@ body {
 }
 
 ::-webkit-scrollbar-track {
-  background: rgba(15, 23, 42, 0.6);
+  background: rgba(18, 18, 21, 0.8);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #334155;
+  background: #27272a;
   border-radius: 9999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #475569;
+  background: #3f3f46;
 }
 
 /* Tabular figures for operational dates and metrics */
@@ -64,22 +65,39 @@ body {
 }
 
 .kanban-column-over {
-  background-color: rgba(30, 41, 59, 0.4);
-  border-color: #6366f1 !important;
+  background-color: rgba(39, 39, 42, 0.5);
+  border-color: #3b82f6 !important;
 }
 
 /* Glass & Surface helpers */
 .surface-glass {
-  background-color: rgba(15, 23, 42, 0.85);
+  background-color: rgba(18, 18, 21, 0.9);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
 }
 
-/* Badges and tags */
+/* ==============================================================================
+   ACCOUNT TAGS:
+   - Verde para Meta Máxima Cursos
+   - Azul para Meta Máxima Digital
+   ============================================================================== */
+.badge-account-cursos {
+  background-color: rgba(16, 185, 129, 0.15);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.35);
+}
+
+.badge-account-digital {
+  background-color: rgba(59, 130, 246, 0.15);
+  color: #60a5fa;
+  border: 1px solid rgba(59, 130, 246, 0.35);
+}
+
+/* Funnel badges */
 .badge-funnel-topo {
-  background-color: rgba(99, 102, 241, 0.12);
-  color: #818cf8;
-  border: 1px solid rgba(99, 102, 241, 0.25);
+  background-color: rgba(59, 130, 246, 0.12);
+  color: #60a5fa;
+  border: 1px solid rgba(59, 130, 246, 0.25);
 }
 
 .badge-funnel-meio {
@@ -94,14 +112,15 @@ body {
   border: 1px solid rgba(139, 92, 246, 0.25);
 }
 
+/* Priority badges */
 .badge-priority-baixa {
-  background-color: rgba(100, 116, 139, 0.15);
-  color: #94a3b8;
+  background-color: rgba(113, 113, 122, 0.15);
+  color: #a1a1aa;
 }
 
 .badge-priority-normal {
-  background-color: rgba(99, 102, 241, 0.12);
-  color: #818cf8;
+  background-color: rgba(59, 130, 246, 0.12);
+  color: #60a5fa;
 }
 
 .badge-priority-alta {
