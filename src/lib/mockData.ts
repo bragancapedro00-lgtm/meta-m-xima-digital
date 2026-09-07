@@ -560,15 +560,9 @@ export const INITIAL_INTEGRATIONS: IntegracaoConfig[] = [
 ];
 
 export const INITIAL_DRIVE_FOLDERS: GoogleDriveFolderMapping[] = [
-  { id: 'gdf-1', status: 'ideias', folder_id: 'drive_f_01', folder_name: '01_Ideias_e_Briefings' },
-  { id: 'gdf-2', status: 'a_gravar', folder_id: 'drive_f_02', folder_name: '02_A_Gravar_Roteiros' },
-  { id: 'gdf-3', status: 'gravado', folder_id: 'drive_f_03', folder_name: '03_Gravados_Brutos' },
-  { id: 'gdf-4', status: 'a_editar', folder_id: 'drive_f_04a', folder_name: '04_A_Editar_Pendentes' },
-  { id: 'gdf-5', status: 'editado', folder_id: 'drive_f_04b', folder_name: '05_Editados_PreAprovacao' },
-  { id: 'gdf-6', status: 'revisao', folder_id: 'drive_f_05', folder_name: '06_Revisao_Aprovacao' },
-  { id: 'gdf-7', status: 'aprovado', folder_id: 'drive_f_06', folder_name: '07_Aprovados_Prontos' },
-  { id: 'gdf-8', status: 'agendado', folder_id: 'drive_f_07', folder_name: '08_Agendados_MetaSuite' },
-  { id: 'gdf-9', status: 'postado', folder_id: 'drive_f_08', folder_name: '09_Postados_Finalizados' },
+  { id: 'gdf-gravado', status: 'gravado', folder_id: '19_TAUMLSHKnMnbrCnXh3W2Ckph9L_b0_', folder_name: 'Gravado' },
+  { id: 'gdf-editado', status: 'editado', folder_id: '14Fejcns0sSJ7QNww9A8J-7hrVUU83drj', folder_name: 'Editado' },
+  { id: 'gdf-postado', status: 'postado', folder_id: '1e1MiCRqtVB9xiqlJn-GbHFXipZThWahb', folder_name: 'Postado' },
 ];
 
 export const INITIAL_CAMPAIGNS: MetaCampaign[] = [

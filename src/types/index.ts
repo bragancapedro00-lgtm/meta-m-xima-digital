@@ -184,6 +184,8 @@ export interface Post {
   google_drive_web_view_link?: string;
   google_drive_mime_type?: string;
   google_drive_thumbnail_url?: string;
+  google_drive_sync_status?: 'sincronizado' | 'pendente' | 'erro' | 'sem_arquivo' | 'nao_sincronizado';
+  google_drive_sync_error?: string;
   drive_file_id?: string;
   drive_file_url?: string;
   drive_folder_id?: string;
@@ -332,9 +334,32 @@ export interface Perfil {
 }
 
 // Google Drive Integration
+export const DRIVE_PHYSICAL_STAGES: PostStatus[] = ['gravado', 'editado', 'postado'];
+
+export const DRIVE_FOLDER_IDS = {
+  gravado: '19_TAUMLSHKnMnbrCnXh3W2Ckph9L_b0_',
+  editado: '14Fejcns0sSJ7QNww9A8J-7hrVUU83drj',
+  postado: '1e1MiCRqtVB9xiqlJn-GbHFXipZThWahb',
+} as const;
+
+export const DEFAULT_DRIVE_FOLDER_MAPPINGS: Record<'gravado' | 'editado' | 'postado', { folder_id: string; folder_name: string }> = {
+  gravado: {
+    folder_id: '19_TAUMLSHKnMnbrCnXh3W2Ckph9L_b0_',
+    folder_name: 'Gravado',
+  },
+  editado: {
+    folder_id: '14Fejcns0sSJ7QNww9A8J-7hrVUU83drj',
+    folder_name: 'Editado',
+  },
+  postado: {
+    folder_id: '1e1MiCRqtVB9xiqlJn-GbHFXipZThWahb',
+    folder_name: 'Postado',
+  },
+};
+
 export interface GoogleDriveFolderMapping {
   id?: string;
-  status: PostStatus;
+  status: 'gravado' | 'editado' | 'postado' | PostStatus;
   folder_id: string;
   folder_name: string;
 }
@@ -342,14 +367,19 @@ export interface GoogleDriveFolderMapping {
 export interface GoogleDriveSyncLog {
   id: string;
   post_id: string;
-  post_titulo: string;
+  post_titulo?: string;
   file_id: string;
-  file_name: string;
+  file_name?: string;
+  source_folder_id?: string;
+  destination_folder_id: string;
   from_folder_id?: string;
-  to_folder_id: string;
-  to_folder_name: string;
+  to_folder_id?: string;
+  to_folder_name?: string;
+  action?: string;
   status: 'sucesso' | 'erro';
+  error_message?: string;
   erro_mensagem?: string;
+  created_at?: string;
   criado_em: string;
 }
 

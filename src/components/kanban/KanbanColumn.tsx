@@ -1,10 +1,11 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Post, PostStatus } from '@/types';
+import { Post, PostStatus, DRIVE_PHYSICAL_STAGES } from '@/types';
 import { useContent } from '@/lib/context/ContentContext';
 import KanbanCard from './KanbanCard';
 import { Plus } from 'lucide-react';
+import { GoogleDriveIcon } from '@/components/icons/BrandIcons';
 
 interface KanbanColumnProps {
   status: PostStatus;
@@ -16,6 +17,7 @@ interface KanbanColumnProps {
 export default function KanbanColumn({ status, label, colorClass, posts }: KanbanColumnProps) {
   const { updatePostStatus, openNewPostModal } = useContent();
   const [isOver, setIsOver] = useState(false);
+  const isPhysical = (DRIVE_PHYSICAL_STAGES as string[]).includes(status);
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
@@ -57,6 +59,15 @@ export default function KanbanColumn({ status, label, colorClass, posts }: Kanba
           <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-slate-800 px-1.5 text-[11px] font-bold text-slate-400 tabular-nums">
             {posts.length}
           </span>
+          {isPhysical && (
+            <span
+              title="Etapa física com pasta sincronizada no Google Drive"
+              className="flex items-center gap-1 rounded bg-blue-500/15 border border-blue-500/25 px-1.5 py-0.5 text-[9px] font-bold text-blue-300 uppercase tracking-wider"
+            >
+              <GoogleDriveIcon className="h-2.5 w-2.5" />
+              Drive
+            </span>
+          )}
         </div>
 
         <button

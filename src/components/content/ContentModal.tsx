@@ -11,6 +11,8 @@ import {
   Plataforma,
   ClassificacaoConteudo,
   UsoTrafegoPago,
+  DRIVE_PHYSICAL_STAGES,
+  DRIVE_FOLDER_IDS,
 } from '@/types';
 import {
   X,
@@ -45,6 +47,7 @@ import {
   Eye,
   MousePointerClick,
   Users,
+  UploadCloud,
 } from 'lucide-react';
 import { GoogleDriveIcon, MetaIcon, InstagramIcon, FacebookIcon } from '@/components/icons/BrandIcons';
 
@@ -71,6 +74,8 @@ export default function ContentModal() {
     creatives,
     auditLogs,
     moveGoogleDriveFile,
+    retryGoogleDriveSync,
+    linkGoogleDriveFile,
     linkPostToAd,
     integrations,
   } = useContent();
@@ -83,6 +88,12 @@ export default function ContentModal() {
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [driveSyncing, setDriveSyncing] = useState(false);
   const [driveSyncMessage, setDriveSyncMessage] = useState<string | null>(null);
+  const [shareToast, setShareToast] = useState(false);
+  const [retryingDrive, setRetryingDrive] = useState(false);
+  const [showDriveLinkForm, setShowDriveLinkForm] = useState(false);
+  const [linkFileId, setLinkFileId] = useState('');
+  const [linkFileName, setLinkFileName] = useState('');
+  const [linkFileUrl, setLinkFileUrl] = useState('');
 
   // Check checklist items state (local helper for pre-publication)
   const [checklist, setChecklist] = useState({
@@ -232,6 +243,43 @@ Meta Máxima Digital - Sistema de Conteúdo & Performance`;
     }
   };
 
+  const handleShare = async () => {
+    const title = formData.titulo || selectedPost.titulo;
+    const text = `📌 ${title}\nStatus: ${(formData.status || selectedPost.status).toUpperCase()}\nData: ${formData.data_publicacao || selectedPost.data_publicacao}${formData.hora_publicacao ? ' às ' + formData.hora_publicacao : ''}\nResponsável: ${formData.responsavel || selectedPost.responsavel}`;
+    const url = typeof window !== 'undefined' ? window.location.href : '';
+
+    if (typeof navigator !== 'undefined' && navigator.share && navigator.canShare && navigator.canShare({ title, text, url })) {
+      try {
+        await navigator.share({ title, text, url });
+        return;
+      } catch (err: any) {
+        if (err.name === 'AbortError') return;
+      }
+    }
+
+    try {
+      await navigator.clipboard.writeText(`${text}\n${url}`);
+      setShareToast(true);
+      setTimeout(() => setShareToast(false), 2500);
+    } catch {
+      alert('Link copiado para a área de transferência!');
+    }
+  };
+
+  const handleLinkDriveSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!linkFileId.trim()) return;
+    await linkGoogleDriveFile(selectedPost.id, {
+      fileId: linkFileId.trim(),
+      fileName: linkFileName.trim() || 'arquivo_drive.mp4',
+      fileUrl: linkFileUrl.trim() || `https://drive.google.com/file/d/${linkFileId.trim()}/view`,
+    });
+    setShowDriveLinkForm(false);
+    setLinkFileId('');
+    setLinkFileName('');
+    setLinkFileUrl('');
+  };
+
   return (
     <div
       role="dialog"
@@ -272,6 +320,23 @@ Meta Máxima Digital - Sistema de Conteúdo & Performance`;
           </div>
 
           <div className="flex items-center gap-2">
+            <button
+              onClick={handleShare}
+              className="flex items-center gap-1.5 rounded-md bg-slate-800 hover:bg-slate-700 px-3 py-1.5 text-xs font-semibold text-slate-200 hover:text-white transition-all active:scale-95 border border-slate-700"
+              title="Compartilhar conteúdo"
+            >
+              {shareToast ? (
+                <>
+                  <Check className="h-3.5 w-3.5 text-emerald-400" />
+                  <span className="text-emerald-400">Copiado!</span>
+                </>
+              ) : (
+                <>
+                  <Share2 className="h-3.5 w-3.5 text-indigo-400" />
+                  <span>Compartilhar</span>
+                </>
+              )}
+            </button>
             <button
               onClick={handleSave}
               disabled={isSaving}
@@ -765,162 +830,330 @@ Meta Máxima Digital - Sistema de Conteúdo & Performance`;
           )}
 
           {/* TAB 3: ARQUIVOS & GOOGLE DRIVE */}
-          {currentTab === 'arquivos' && (
-            <div className="space-y-6">
-              
-              {/* Google Drive Status Section */}
-              <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-5 space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2.5 bg-blue-500/10 border border-blue-500/20 rounded-lg">
-                      <GoogleDriveIcon className="h-6 w-6" />
-                    </div>
-                    <div>
-                      <h4 className="text-sm font-semibold text-slate-100 flex items-center gap-2">
-                        Integração Google Drive Workspace
-                        <span
-                          className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase ${
-                            isDriveConnected
-                              ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
-                              : 'bg-rose-500/15 text-rose-400 border border-rose-500/30'
-                          }`}
-                        >
-                          {isDriveConnected ? 'Conectado & Sincronizado' : 'Não Conectado'}
-                        </span>
-                      </h4>
-                      <p className="text-xs text-slate-400 mt-0.5">
-                        Arquivos organizados automaticamente em pastas sincronizadas com o status do Kanban.
-                      </p>
-                    </div>
-                  </div>
+          {currentTab === 'arquivos' && (() => {
+            const isCurrentPhysical = (DRIVE_PHYSICAL_STAGES as string[]).includes(formData.status || selectedPost.status);
+            const targetDriveFolder = isCurrentPhysical
+              ? {
+                  id: DRIVE_FOLDER_IDS[(formData.status || selectedPost.status) as 'gravado' | 'editado' | 'postado'],
+                  name: (formData.status || selectedPost.status) === 'gravado' ? 'Gravado' : (formData.status || selectedPost.status) === 'editado' ? 'Editado' : 'Postado',
+                }
+              : null;
+            const hasDriveFile = Boolean(formData.google_drive_file_id || selectedPost.google_drive_file_id || formData.drive_file_id || selectedPost.drive_file_id);
+            const driveFileId = formData.google_drive_file_id || selectedPost.google_drive_file_id || formData.drive_file_id || selectedPost.drive_file_id;
+            const driveFileName = formData.google_drive_file_name || selectedPost.google_drive_file_name || 'arquivo_drive.mp4';
+            const driveFileUrl = formData.google_drive_web_view_link || selectedPost.google_drive_web_view_link || formData.drive_file_url || selectedPost.drive_file_url || (driveFileId ? `https://drive.google.com/file/d/${driveFileId}/view` : '');
+            const syncStatus = formData.google_drive_sync_status || selectedPost.google_drive_sync_status || (hasDriveFile ? 'sincronizado' : 'sem_arquivo');
+            const syncError = formData.google_drive_sync_error || selectedPost.google_drive_sync_error;
 
-                  <button
-                    onClick={handleSyncDriveNow}
-                    disabled={driveSyncing || !isDriveConnected}
-                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md bg-blue-600 hover:bg-blue-500 text-white transition-colors disabled:opacity-50"
-                  >
-                    <Folder className="h-3.5 w-3.5" />
-                    {driveSyncing ? 'Sincronizando...' : 'Mover p/ Pasta do Status'}
-                  </button>
-                </div>
-
-                {driveSyncMessage && (
-                  <div className="text-xs text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 p-2.5 rounded-lg flex items-center gap-2">
-                    <CheckCircle2 className="h-4 w-4" />
-                    {driveSyncMessage}
-                  </div>
-                )}
-
-                {/* Drive Folder details */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2 border-t border-slate-800">
-                  <div className="p-3 rounded-lg bg-slate-950/60 border border-slate-800">
-                    <span className="text-[11px] font-medium text-slate-400">Pasta Atual Mapeada no Drive:</span>
-                    <p className="text-sm font-semibold text-indigo-400 mt-1 flex items-center gap-2">
-                      <Folder className="h-4 w-4" />
-                      {formData.drive_folder_name || currentStatusDriveFolder?.folder_name || 'Pasta padrão do status'}
-                    </p>
-                  </div>
-                  <div className="p-3 rounded-lg bg-slate-950/60 border border-slate-800 flex items-center justify-between">
-                    <div>
-                      <span className="text-[11px] font-medium text-slate-400">Link Direto no Drive:</span>
-                      <p className="text-xs text-slate-300 mt-1 truncate max-w-[200px]">
-                        {formData.drive_file_url || 'Sincronizado na pasta do status'}
-                      </p>
+            return (
+              <div className="space-y-6">
+                
+                {/* Google Drive Status Section */}
+                <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-5 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2.5 bg-blue-500/10 border border-blue-500/20 rounded-lg">
+                        <GoogleDriveIcon className="h-6 w-6" />
+                      </div>
+                      <div>
+                        <h4 className="text-sm font-semibold text-slate-100 flex items-center gap-2">
+                          Google Drive Workspace
+                          {isCurrentPhysical ? (
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded uppercase bg-blue-500/15 text-blue-300 border border-blue-500/30">
+                              Etapa Física: {targetDriveFolder?.name}
+                            </span>
+                          ) : (
+                            <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-slate-800 text-slate-400 border border-slate-700">
+                              Etapa Sem Arquivo Físico
+                            </span>
+                          )}
+                        </h4>
+                        <p className="text-xs text-slate-400 mt-0.5">
+                          Sincronização física seletiva habilitada exclusivamente para: Gravado, Editado e Postado.
+                        </p>
+                      </div>
                     </div>
-                    {formData.drive_file_url ? (
-                      <a
-                        href={formData.drive_file_url}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="flex items-center gap-1 text-xs font-semibold text-blue-400 hover:text-blue-300 bg-blue-500/10 px-2.5 py-1.5 rounded border border-blue-500/20"
+
+                    {isCurrentPhysical && hasDriveFile && (
+                      <button
+                        onClick={handleSyncDriveNow}
+                        disabled={driveSyncing}
+                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md bg-blue-600 hover:bg-blue-500 text-white transition-colors disabled:opacity-50"
                       >
-                        <ExternalLink className="h-3.5 w-3.5" />
-                        Abrir Pasta
-                      </a>
-                    ) : (
-                      <span className="text-xs text-slate-500 italic">Disponível ao sincronizar</span>
+                        <Folder className="h-3.5 w-3.5" />
+                        {driveSyncing ? 'Sincronizando...' : 'Sincronizar Pasta Agora'}
+                      </button>
                     )}
                   </div>
-                </div>
-              </div>
 
-              {/* Local / Supabase Storage Upload */}
-              <div className="border-2 border-dashed border-slate-800 hover:border-indigo-500/60 rounded-xl p-6 text-center bg-slate-950/40 transition-colors">
-                <Upload className="h-8 w-8 text-indigo-400 mx-auto mb-2" />
-                <h5 className="text-sm font-semibold text-slate-200">
-                  Upload de Arquivos & Assets
-                </h5>
-                <p className="text-xs text-slate-400 mt-1 max-w-sm mx-auto">
-                  Vídeos brutos, roteiros em PDF, criativos finalizados, fotos e anexos do projeto.
-                </p>
-                <label className="inline-block mt-3 cursor-pointer">
-                  <span className="bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold px-4 py-2 rounded-md transition-colors shadow">
-                    Selecionar Arquivo do Computador
-                  </span>
-                  <input
-                    type="file"
-                    className="hidden"
-                    onChange={handleFileUpload}
-                  />
-                </label>
-              </div>
+                  {driveSyncMessage && (
+                    <div className="text-xs text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 p-2.5 rounded-lg flex items-center gap-2">
+                      <CheckCircle2 className="h-4 w-4" />
+                      {driveSyncMessage}
+                    </div>
+                  )}
 
-              {/* Attached Files List */}
-              <div>
-                <h5 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">
-                  Arquivos Vinculados a este Conteúdo ({postFiles.length})
-                </h5>
-
-                {postFiles.length === 0 ? (
-                  <div className="text-center py-6 text-slate-500 text-xs border border-dashed border-slate-800 rounded-lg">
-                    Nenhum arquivo local anexado ainda.
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    {postFiles.map((file) => (
-                      <div
-                        key={file.id}
-                        className="flex items-center justify-between bg-slate-900 border border-slate-800 p-3 rounded-lg hover:bg-slate-850 transition-colors"
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className="p-2 bg-slate-800 rounded text-indigo-400">
-                            <Paperclip className="h-4 w-4" />
-                          </div>
-                          <div>
-                            <p className="text-sm font-medium text-slate-200">{file.nome}</p>
-                            <p className="text-xs text-slate-400">
-                              <span className="uppercase text-indigo-300 font-semibold">{file.categoria_arquivo}</span> •{' '}
-                              {(file.tamanho_bytes / 1024 / 1024).toFixed(2)} MB •{' '}
-                              {new Date(file.criado_em).toLocaleDateString('pt-BR')}
-                            </p>
-                          </div>
+                  {!isCurrentPhysical ? (
+                    <div className="p-3.5 rounded-lg bg-slate-950/60 border border-slate-800 text-xs text-slate-400 flex items-start gap-3">
+                      <div className="p-2 rounded bg-slate-900 text-slate-300 shrink-0">
+                        <Folder className="h-4 w-4 text-indigo-400" />
+                      </div>
+                      <div>
+                        <p className="font-semibold text-slate-200">
+                          Etapa &quot;{(formData.status || selectedPost.status).toUpperCase()}&quot; não exige arquivo no Google Drive.
+                        </p>
+                        <p className="mt-1 text-slate-400 leading-relaxed text-[11px]">
+                          Ideias, A Gravar, A Editar e Agendado fluem livremente sem exigir arquivos físicos. Quando o card for movido para <strong className="text-indigo-300">Gravado</strong>, <strong className="text-indigo-300">Editado</strong> ou <strong className="text-indigo-300">Postado</strong>, a sincronização de pastas será acionada automaticamente.
+                        </p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-3 pt-1">
+                      {/* Physical Stage Folder Info */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div className="p-3 rounded-lg bg-slate-950/60 border border-slate-800">
+                          <span className="text-[11px] font-medium text-slate-400">Pasta Fixa do Drive:</span>
+                          <p className="text-xs font-semibold text-indigo-300 mt-1 flex items-center gap-1.5 font-mono">
+                            <Folder className="h-3.5 w-3.5 text-indigo-400 shrink-0" />
+                            {targetDriveFolder?.name} (ID: {targetDriveFolder?.id})
+                          </p>
                         </div>
+                        <div className="p-3 rounded-lg bg-slate-950/60 border border-slate-800 flex items-center justify-between">
+                          <div>
+                            <span className="text-[11px] font-medium text-slate-400">Status da Sincronização:</span>
+                            <div className="mt-1 flex items-center gap-2">
+                              {syncStatus === 'erro' ? (
+                                <span className="text-xs font-bold text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/25">
+                                  ⚠️ Sincronização pendente
+                                </span>
+                              ) : hasDriveFile ? (
+                                <span className="text-xs font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/25">
+                                  ✓ Sincronizado
+                                </span>
+                              ) : (
+                                <span className="text-xs text-slate-400 italic">
+                                  Nenhum arquivo vinculado
+                                </span>
+                              )}
+                            </div>
+                          </div>
 
-                        <div className="flex items-center gap-1.5">
-                          <a
-                            href={file.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="p-1.5 text-slate-400 hover:text-white rounded hover:bg-slate-800 transition-colors"
-                            title="Baixar Arquivo"
-                          >
-                            <Download className="h-4 w-4" />
-                          </a>
-                          <button
-                            onClick={() => deleteFile(file.id)}
-                            className="p-1.5 text-slate-400 hover:text-rose-400 rounded hover:bg-slate-800 transition-colors"
-                            title="Excluir Arquivo"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
+                          {syncStatus === 'erro' && (
+                            <button
+                              type="button"
+                              disabled={retryingDrive}
+                              onClick={async () => {
+                                setRetryingDrive(true);
+                                try {
+                                  await retryGoogleDriveSync(selectedPost.id);
+                                } finally {
+                                  setRetryingDrive(false);
+                                }
+                              }}
+                              className="text-xs font-bold text-amber-300 hover:text-white bg-amber-500/20 hover:bg-amber-500/30 px-2.5 py-1 rounded border border-amber-500/40"
+                            >
+                              {retryingDrive ? 'Tentando...' : 'Tentar novamente'}
+                            </button>
+                          )}
                         </div>
                       </div>
-                    ))}
-                  </div>
-                )}
+
+                      {/* Error details if any */}
+                      {syncError && (
+                        <div className="p-2.5 rounded-lg bg-rose-500/10 border border-rose-500/25 text-rose-300 text-xs flex items-center gap-2">
+                          <AlertTriangle className="h-4 w-4 shrink-0" />
+                          <span>{syncError}</span>
+                        </div>
+                      )}
+
+                      {/* Linked File Info or Link Button */}
+                      {hasDriveFile ? (
+                        <div className="p-3 rounded-lg bg-slate-950/80 border border-slate-800 flex items-center justify-between gap-3">
+                          <div className="flex items-center gap-2.5 truncate">
+                            <GoogleDriveIcon className="h-5 w-5 shrink-0 text-emerald-400" />
+                            <div className="truncate">
+                              <p className="text-xs font-semibold text-slate-100 truncate">{driveFileName}</p>
+                              <p className="text-[11px] text-slate-400 font-mono truncate">ID: {driveFileId}</p>
+                            </div>
+                          </div>
+                          {driveFileUrl && (
+                            <a
+                              href={driveFileUrl}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="flex items-center gap-1 text-xs font-semibold text-blue-400 hover:text-blue-300 bg-blue-500/10 px-2.5 py-1.5 rounded border border-blue-500/20 shrink-0"
+                            >
+                              <ExternalLink className="h-3.5 w-3.5" />
+                              Abrir no Drive
+                            </a>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="p-3.5 rounded-lg bg-slate-950/50 border border-dashed border-slate-800 text-center space-y-2">
+                          <p className="text-xs text-slate-400">
+                            {formData.status === 'gravado'
+                              ? 'Este conteúdo está gravado mas ainda não tem arquivo do Google Drive vinculado.'
+                              : 'Este conteúdo ainda não possui um arquivo vinculado ao Google Drive.'}
+                          </p>
+                          <button
+                            type="button"
+                            onClick={() => setShowDriveLinkForm(true)}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/30 text-indigo-300 text-xs font-semibold"
+                          >
+                            <UploadCloud className="h-3.5 w-3.5" />
+                            Adicionar arquivo do Google Drive
+                          </button>
+                        </div>
+                      )}
+
+                      {/* Form to link Drive File manually */}
+                      {showDriveLinkForm && (
+                        <form onSubmit={handleLinkDriveSubmit} className="p-3.5 rounded-xl bg-slate-950 border border-indigo-500/30 space-y-3">
+                          <div className="flex items-center justify-between">
+                            <h6 className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
+                              <GoogleDriveIcon className="h-4 w-4" />
+                              Vincular Arquivo do Google Drive
+                            </h6>
+                            <button
+                              type="button"
+                              onClick={() => setShowDriveLinkForm(false)}
+                              className="text-slate-500 hover:text-white text-xs"
+                            >
+                              <X className="h-4 w-4" />
+                            </button>
+                          </div>
+                          <div>
+                            <label className="block text-[11px] text-slate-400 mb-1 font-semibold">ID do Arquivo no Google Drive *</label>
+                            <input
+                              type="text"
+                              required
+                              value={linkFileId}
+                              onChange={(e) => setLinkFileId(e.target.value)}
+                              placeholder="Ex: 19_TAUMLSHKnMnbrCnXh3W2Ckph9L_b0_ ou código do link de compartilhamento"
+                              className="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-xs text-slate-100 font-mono focus:outline-none focus:border-indigo-500"
+                            />
+                          </div>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div>
+                              <label className="block text-[11px] text-slate-400 mb-1 font-semibold">Nome do Arquivo</label>
+                              <input
+                                type="text"
+                                value={linkFileName}
+                                onChange={(e) => setLinkFileName(e.target.value)}
+                                placeholder="Ex: video_bruto_gravacao.mp4"
+                                className="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-indigo-500"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-[11px] text-slate-400 mb-1 font-semibold">Link Direto (Opcional)</label>
+                              <input
+                                type="url"
+                                value={linkFileUrl}
+                                onChange={(e) => setLinkFileUrl(e.target.value)}
+                                placeholder="https://drive.google.com/file/d/..."
+                                className="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-indigo-500"
+                              />
+                            </div>
+                          </div>
+                          <div className="flex justify-end gap-2 pt-1">
+                            <button
+                              type="button"
+                              onClick={() => setShowDriveLinkForm(false)}
+                              className="px-3 py-1.5 rounded text-xs text-slate-400 hover:text-white"
+                            >
+                              Cancelar
+                            </button>
+                            <button
+                              type="submit"
+                              className="px-4 py-1.5 rounded bg-indigo-600 hover:bg-indigo-500 text-xs font-semibold text-white"
+                            >
+                              Salvar Vínculo
+                            </button>
+                          </div>
+                        </form>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* Local / Supabase Storage Upload */}
+                <div className="border-2 border-dashed border-slate-800 hover:border-indigo-500/60 rounded-xl p-6 text-center bg-slate-950/40 transition-colors">
+                  <Upload className="h-8 w-8 text-indigo-400 mx-auto mb-2" />
+                  <h5 className="text-sm font-semibold text-slate-200">
+                    Upload de Arquivos & Assets
+                  </h5>
+                  <p className="text-xs text-slate-400 mt-1 max-w-sm mx-auto">
+                    Vídeos brutos, roteiros em PDF, criativos finalizados, fotos e anexos do projeto.
+                  </p>
+                  <label className="inline-block mt-3 cursor-pointer">
+                    <span className="bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold px-4 py-2 rounded-md transition-colors shadow">
+                      Selecionar Arquivo do Computador
+                    </span>
+                    <input
+                      type="file"
+                      className="hidden"
+                      onChange={handleFileUpload}
+                    />
+                  </label>
+                </div>
+
+                {/* Attached Files List */}
+                <div>
+                  <h5 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">
+                    Arquivos Vinculados a este Conteúdo ({postFiles.length})
+                  </h5>
+
+                  {postFiles.length === 0 ? (
+                    <div className="text-center py-6 text-slate-500 text-xs border border-dashed border-slate-800 rounded-lg">
+                      Nenhum arquivo local anexado ainda.
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {postFiles.map((file) => (
+                        <div
+                          key={file.id}
+                          className="flex items-center justify-between bg-slate-900 border border-slate-800 p-3 rounded-lg hover:bg-slate-850 transition-colors"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="p-2 bg-slate-800 rounded text-indigo-400">
+                              <Paperclip className="h-4 w-4" />
+                            </div>
+                            <div>
+                              <p className="text-sm font-medium text-slate-200">{file.nome}</p>
+                              <p className="text-xs text-slate-400">
+                                <span className="uppercase text-indigo-300 font-semibold">{file.categoria_arquivo}</span> •{' '}
+                                {(file.tamanho_bytes / 1024 / 1024).toFixed(2)} MB •{' '}
+                                {new Date(file.criado_em).toLocaleDateString('pt-BR')}
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-1.5">
+                            <a
+                              href={file.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="p-1.5 text-slate-400 hover:text-white rounded hover:bg-slate-800 transition-colors"
+                              title="Baixar Arquivo"
+                            >
+                              <Download className="h-4 w-4" />
+                            </a>
+                            <button
+                              onClick={() => deleteFile(file.id)}
+                              className="p-1.5 text-slate-400 hover:text-rose-400 rounded hover:bg-slate-800 transition-colors"
+                              title="Excluir Arquivo"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
 
           {/* TAB 4: PUBLICAÇÃO */}
           {currentTab === 'publicacao' && (

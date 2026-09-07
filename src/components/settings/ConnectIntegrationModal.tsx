@@ -45,6 +45,8 @@ export default function ConnectIntegrationModal({
         ad_account_id: integration.credenciais.ad_account_id || '',
         page_id: integration.credenciais.page_id || '',
         ig_account_id: integration.credenciais.ig_account_id || '',
+        pixel_id: integration.credenciais.pixel_id || '',
+        pixel_conversion_token: integration.credenciais.pixel_conversion_token || '',
         property_id: integration.credenciais.property_id || '',
         measurement_id: integration.credenciais.measurement_id || '',
         client_email: integration.credenciais.client_email || '',
@@ -87,9 +89,20 @@ export default function ConnectIntegrationModal({
     e.preventDefault();
     setSaving(true);
     try {
+      const hasAnyCredential = Boolean(
+        formData.access_token ||
+        formData.property_id ||
+        formData.customer_id ||
+        formData.ad_account_id ||
+        formData.pixel_id ||
+        formData.client_email ||
+        formData.refresh_token ||
+        formData.client_id
+      );
+
       await updateIntegration(integration.provedor, {
         credenciais: { ...integration.credenciais, ...formData },
-        status: (formData.access_token || formData.property_id || formData.customer_id) ? 'conectado' : 'desconectado',
+        status: hasAnyCredential ? 'conectado' : 'desconectado',
         ultima_sincronizacao: new Date().toISOString(),
       });
       onClose();
@@ -373,6 +386,159 @@ export default function ConnectIntegrationModal({
             </>
           )}
 
+          {/* ========================================================================= */}
+          {/* 4. META ADS MANAGER FIELDS */}
+          {/* ========================================================================= */}
+          {integration.provedor === 'meta_ads' && (
+            <>
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
+                  ID da Conta de Anúncios (Ad Account ID) *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={formData.ad_account_id || ''}
+                  onChange={(e) => handleChange('ad_account_id', e.target.value)}
+                  placeholder="Ex: act_904812395"
+                  className="w-full rounded-lg bg-slate-900 border border-slate-700 px-3.5 py-2.5 text-xs text-slate-100 font-mono focus:outline-none focus:border-indigo-500"
+                />
+                <span className="text-[11px] text-slate-500 mt-1 block">
+                  Identificador da conta no Gerenciador de Anúncios (com prefixo <code className="text-slate-400">act_</code>).
+                </span>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
+                  Token de Acesso da Meta Marketing API *
+                </label>
+                <input
+                  type="password"
+                  value={formData.access_token || ''}
+                  onChange={(e) => handleChange('access_token', e.target.value)}
+                  placeholder="EAABwzLIX... (Token de Usuário do Sistema com ads_read, ads_management)"
+                  className="w-full rounded-lg bg-slate-900 border border-slate-700 px-3.5 py-2.5 text-xs text-slate-100 font-mono focus:outline-none focus:border-indigo-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
+                  ID do Business Manager (Opcional)
+                </label>
+                <input
+                  type="text"
+                  value={formData.business_id || ''}
+                  onChange={(e) => handleChange('business_id', e.target.value)}
+                  placeholder="Ex: 77491028401"
+                  className="w-full rounded-lg bg-slate-900 border border-slate-700 px-3.5 py-2.5 text-xs text-slate-100 font-mono focus:outline-none focus:border-indigo-500"
+                />
+              </div>
+            </>
+          )}
+
+          {/* ========================================================================= */}
+          {/* 5. META PIXEL & CAPI FIELDS */}
+          {/* ========================================================================= */}
+          {integration.provedor === 'meta_pixel' && (
+            <>
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
+                  ID do Pixel da Meta (Pixel ID) *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={formData.pixel_id || ''}
+                  onChange={(e) => handleChange('pixel_id', e.target.value)}
+                  placeholder="Ex: 129481029482019 (15 a 16 dígitos)"
+                  className="w-full rounded-lg bg-slate-900 border border-slate-700 px-3.5 py-2.5 text-xs text-slate-100 font-mono focus:outline-none focus:border-indigo-500"
+                />
+                <span className="text-[11px] text-slate-500 mt-1 block">
+                  Encontrado no Gerenciador de Eventos da Meta em Fontes de Dados &gt; Configurações.
+                </span>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
+                  Token da API de Conversões (CAPI)
+                </label>
+                <input
+                  type="password"
+                  value={formData.pixel_conversion_token || formData.access_token || ''}
+                  onChange={(e) => {
+                    handleChange('pixel_conversion_token', e.target.value);
+                    handleChange('access_token', e.target.value);
+                  }}
+                  placeholder="EAABwzLIX... (Gerado em Gerenciador de Eventos > API de Conversões)"
+                  className="w-full rounded-lg bg-slate-900 border border-slate-700 px-3.5 py-2.5 text-xs text-slate-100 font-mono focus:outline-none focus:border-indigo-500"
+                />
+                <span className="text-[11px] text-slate-500 mt-1 block">
+                  Necessário para envio direto de eventos server-side de Leads, Contatos e Conversões.
+                </span>
+              </div>
+            </>
+          )}
+
+          {/* ========================================================================= */}
+          {/* 6. GOOGLE DRIVE WORKSPACE FIELDS */}
+          {/* ========================================================================= */}
+          {integration.provedor === 'google_drive' && (
+            <>
+              {/* Fixed physical folders summary */}
+              <div className="p-3.5 rounded-xl bg-slate-950/80 border border-slate-800 space-y-2">
+                <span className="text-[11px] font-bold uppercase text-indigo-400 tracking-wider">
+                  Mapeamento Fixo de Pastas Físicas do Kanban
+                </span>
+                <div className="space-y-1.5 text-xs font-mono text-slate-300">
+                  <div className="flex items-center justify-between p-1.5 rounded bg-slate-900">
+                    <span className="text-slate-400 font-sans">1. GRAVADO:</span>
+                    <span className="text-indigo-300 select-all">19_TAUMLSHKnMnbrCnXh3W2Ckph9L_b0_</span>
+                  </div>
+                  <div className="flex items-center justify-between p-1.5 rounded bg-slate-900">
+                    <span className="text-slate-400 font-sans">2. EDITADO:</span>
+                    <span className="text-indigo-300 select-all">14Fejcns0sSJ7QNww9A8J-7hrVUU83drj</span>
+                  </div>
+                  <div className="flex items-center justify-between p-1.5 rounded bg-slate-900">
+                    <span className="text-slate-400 font-sans">3. POSTADO:</span>
+                    <span className="text-indigo-300 select-all">1e1MiCRqtVB9xiqlJn-GbHFXipZThWahb</span>
+                  </div>
+                </div>
+                <p className="text-[11px] text-slate-500 pt-0.5">
+                  As demais etapas (Ideias, A gravar, A editar, Agendado) não exigem nem movimentam pastas no Google Drive.
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
+                  E-mail da Conta de Serviço Google (Service Account)
+                </label>
+                <input
+                  type="email"
+                  value={formData.client_email || ''}
+                  onChange={(e) => handleChange('client_email', e.target.value)}
+                  placeholder="drive-bot@seu-projeto.iam.gserviceaccount.com"
+                  className="w-full rounded-lg bg-slate-900 border border-slate-700 px-3.5 py-2.5 text-xs text-slate-100 font-mono focus:outline-none focus:border-indigo-500"
+                />
+                <span className="text-[11px] text-slate-500 mt-1 block">
+                  Compartilhe as 3 pastas acima com este e-mail como Editor no Google Drive.
+                </span>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
+                  Chave Privada / JSON da Conta de Serviço (Opcional)
+                </label>
+                <textarea
+                  rows={2}
+                  value={formData.private_key || ''}
+                  onChange={(e) => handleChange('private_key', e.target.value)}
+                  placeholder="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----"
+                  className="w-full rounded-lg bg-slate-900 border border-slate-700 px-3.5 py-2.5 text-xs text-slate-100 font-mono focus:outline-none focus:border-indigo-500 resize-none"
+                />
+              </div>
+            </>
+          )}
+
           {/* Toggle Help Guide */}
           <div className="pt-2">
             <button
@@ -390,7 +556,27 @@ export default function ConnectIntegrationModal({
                   <ol className="list-decimal list-inside space-y-1.5 leading-relaxed text-slate-400">
                     <li>Acesse <strong className="text-slate-200">developers.facebook.com</strong> &gt; Criar App &gt; Tipo: Empresa (Business).</li>
                     <li>Em <strong className="text-slate-200">Ferramentas &gt; Explorador da Graph API</strong>, selecione seu app e conceda as permissões de Instagram e Páginas.</li>
-                    <li>Gere um <strong className="text-slate-200">Token de Usuário do Sistema</strong> no Business Manager com validade de 60 dias ou permanente.</li>
+                    <li>Gere um <strong className="text-slate-200">Token de Usuário do Sistema</strong> no Business Manager com validade permanente.</li>
+                  </ol>
+                )}
+                {integration.provedor === 'meta_ads' && (
+                  <ol className="list-decimal list-inside space-y-1.5 leading-relaxed text-slate-400">
+                    <li>No Gerenciador de Anúncios (<strong className="text-slate-200">adsmanager.facebook.com</strong>), copie o ID da sua conta (ex: <code className="text-slate-200">act_904812395</code>).</li>
+                    <li>Gere um token de acesso de usuário do sistema no Business Manager com as permissões <code className="text-slate-200">ads_read</code> e <code className="text-slate-200">ads_management</code>.</li>
+                  </ol>
+                )}
+                {integration.provedor === 'meta_pixel' && (
+                  <ol className="list-decimal list-inside space-y-1.5 leading-relaxed text-slate-400">
+                    <li>Acesse o <strong className="text-slate-200">Gerenciador de Eventos da Meta</strong> &gt; Fontes de Dados &gt; selecione o Pixel da sua marca.</li>
+                    <li>Copie o <strong className="text-slate-200">Pixel ID</strong> numérico.</li>
+                    <li>Na aba <strong className="text-slate-200">Configurações</strong> &gt; API de Conversões, clique em <strong className="text-slate-200">Gerar token de acesso</strong>.</li>
+                  </ol>
+                )}
+                {integration.provedor === 'google_drive' && (
+                  <ol className="list-decimal list-inside space-y-1.5 leading-relaxed text-slate-400">
+                    <li>As 3 pastas fixas do Kanban já estão pré-configuradas (Gravado, Editado, Postado).</li>
+                    <li>No Google Cloud Console, crie uma <strong className="text-slate-200">Conta de Serviço</strong> com a Google Drive API ativa.</li>
+                    <li>No Google Drive, clique com o botão direito nas pastas e compartilhe o acesso de <strong className="text-slate-200">Editor</strong> com o e-mail da conta de serviço.</li>
                   </ol>
                 )}
                 {integration.provedor === 'google_analytics' && (
@@ -403,7 +589,7 @@ export default function ConnectIntegrationModal({
                 {integration.provedor === 'google_ads' && (
                   <ol className="list-decimal list-inside space-y-1.5 leading-relaxed text-slate-400">
                     <li>No Google Ads (<strong className="text-slate-200">ads.google.com</strong>), copie o ID de 10 dígitos no topo direito (ex: 123-456-7890).</li>
-                    <li>Para uso com API direta, solicite o <strong className="text-slate-200">Developer Token</strong> na sua conta MCC (Administrador) em Ferramentas &gt; Central de APIs.</li>
+                    <li>Para uso com API direta, solicite o <strong className="text-slate-200">Developer Token</strong> na sua conta MCC em Central de APIs.</li>
                   </ol>
                 )}
               </div>

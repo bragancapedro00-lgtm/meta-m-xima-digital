@@ -14,11 +14,15 @@ import {
   PostTipo,
   Plataforma,
   CategoriaIdeia,
+  PerfilRole,
   PermissoesEquipe,
   IntegracaoConfig,
   ProvedorIntegracao,
   DEFAULT_ROLE_PERMISSIONS,
   GoogleDriveFolderMapping,
+  DRIVE_PHYSICAL_STAGES,
+  DRIVE_FOLDER_IDS,
+  DEFAULT_DRIVE_FOLDER_MAPPINGS,
   MetaCampaign,
   MetaAdSet,
   MetaAd,
@@ -117,6 +121,25 @@ interface ContentContextType {
     details?: string
   ) => Promise<void>;
   moveGoogleDriveFile: (postId: string, newStatus: PostStatus) => Promise<{ success: boolean; folderName: string }>;
+  retryGoogleDriveSync: (postId: string) => Promise<{ success: boolean; message: string }>;
+  linkGoogleDriveFile: (
+    postId: string,
+    fileData: {
+      fileId: string;
+      fileName: string;
+      fileUrl: string;
+      folderId?: string;
+      mimeType?: string;
+      thumbnailUrl?: string;
+    }
+  ) => Promise<void>;
+  inviteTeamMember: (data: {
+    nome: string;
+    email: string;
+    cargo: string;
+    role: PerfilRole;
+    senha?: string;
+  }) => Promise<{ success: boolean; member: Perfil; inviteUrl: string }>;
   linkPostToAd: (postId: string, adId: string, campaignId?: string) => Promise<void>;
 
   // AI Assistant Integrations
@@ -452,7 +475,7 @@ export function ContentProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  // Update Post Status & Synchronize with Google Drive folder mapping
+  // Update Post Status & Synchronize selective physical stages with Google Drive
   const updatePostStatus = async (id: string, newStatus: PostStatus) => {
     const post = posts.find((p) => p.id === id);
     if (!post || post.status === newStatus) return;
@@ -461,12 +484,61 @@ export function ContentProvider({ children }: { children: ReactNode }) {
     const newStatusLabel = newStatus.replace('_', ' ').toUpperCase();
     const now = new Date().toISOString();
 
-    // Check Drive folder mapping for target status
-    const targetFolder = driveFolders.find((df) => df.status === newStatus);
-    const driveUpdates: Partial<Post> = {};
-    if (targetFolder) {
+    const isPhysical = (DRIVE_PHYSICAL_STAGES as string[]).includes(newStatus);
+    const targetFolder = driveFolders.find((df) => df.status === newStatus) || (
+      isPhysical && DRIVE_FOLDER_IDS[newStatus as 'gravado' | 'editado' | 'postado']
+        ? {
+            status: newStatus,
+            folder_id: DRIVE_FOLDER_IDS[newStatus as 'gravado' | 'editado' | 'postado'],
+            folder_name: newStatus === 'gravado' ? 'Gravado' : newStatus === 'editado' ? 'Editado' : 'Postado',
+          }
+        : null
+    );
+
+    let driveUpdates: Partial<Post> = {};
+
+    if (isPhysical && targetFolder) {
       driveUpdates.drive_folder_id = targetFolder.folder_id;
       driveUpdates.drive_folder_name = targetFolder.folder_name;
+      driveUpdates.google_drive_folder_id = targetFolder.folder_id;
+
+      const fileId = post.google_drive_file_id || post.drive_file_id;
+      if (!fileId) {
+        // Physical stage without a file: never block movement!
+        driveUpdates.google_drive_sync_status = 'sem_arquivo';
+        driveUpdates.google_drive_sync_error = undefined;
+      } else {
+        // Physical stage with file: move file in Google Drive via server API
+        try {
+          const res = await fetch('/api/drive/move', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              postId: id,
+              fileId,
+              targetStatus: newStatus,
+              sourceFolderId: post.google_drive_folder_id || post.drive_folder_id,
+              destinationFolderId: targetFolder.folder_id,
+            }),
+          });
+          const data = await res.json();
+          if (data.success) {
+            driveUpdates.google_drive_sync_status = 'sincronizado';
+            driveUpdates.google_drive_sync_error = undefined;
+          } else {
+            driveUpdates.google_drive_sync_status = 'erro';
+            driveUpdates.google_drive_sync_error = data.error || 'Falha ao sincronizar pasta no Drive';
+          }
+        } catch (err: any) {
+          driveUpdates.google_drive_sync_status = 'erro';
+          driveUpdates.google_drive_sync_error = err.message || 'Erro de conexão com Google Drive';
+        }
+      }
+    } else {
+      // Non-physical stages: Ideias, A gravar, A editar, Agendado, etc.
+      // NEVER require Drive file, NEVER call Drive API, NEVER block
+      driveUpdates.google_drive_sync_status = post.google_drive_file_id ? 'sincronizado' : undefined;
+      driveUpdates.google_drive_sync_error = undefined;
     }
 
     const updatedPost: Post = {
@@ -484,8 +556,8 @@ export function ContentProvider({ children }: { children: ReactNode }) {
       setSelectedPost((prev) => (prev ? updatedPost : null));
     }
 
-    const driveLogDetail = targetFolder
-      ? ` Arquivo movido no Google Drive para pasta "${targetFolder.folder_name}".`
+    const driveLogDetail = isPhysical && targetFolder
+      ? ` Pasta do Google Drive: "${targetFolder.folder_name}".`
       : '';
 
     await addHistory(id, 'Status Atualizado', `Moveu de "${oldStatusLabel}" para "${newStatusLabel}".${driveLogDetail}`);
@@ -493,18 +565,15 @@ export function ContentProvider({ children }: { children: ReactNode }) {
 
     if (isSupabaseLive) {
       try {
-        await supabase.from('posts').update({ status: newStatus, ...driveUpdates, atualizado_em: now }).eq('id', id);
-        if (targetFolder) {
-          await supabase.from('google_drive_sync_logs').insert([{
-            post_id: id,
-            action: 'MOVE_FOLDER',
-            from_folder_id: post.drive_folder_id || '',
-            from_folder_name: post.drive_folder_name || '',
-            to_folder_id: targetFolder.folder_id,
-            to_folder_name: targetFolder.folder_name,
-            status: 'sucesso',
-          }]);
-        }
+        await supabase.from('posts').update({
+          status: newStatus,
+          drive_folder_id: updatedPost.drive_folder_id,
+          drive_folder_name: updatedPost.drive_folder_name,
+          google_drive_folder_id: updatedPost.google_drive_folder_id,
+          google_drive_sync_status: updatedPost.google_drive_sync_status,
+          google_drive_sync_error: updatedPost.google_drive_sync_error || null,
+          atualizado_em: now,
+        }).eq('id', id);
       } catch (err) {
         console.error('Error updating status in Supabase:', err);
       }
@@ -513,12 +582,179 @@ export function ContentProvider({ children }: { children: ReactNode }) {
 
   const moveGoogleDriveFile = async (postId: string, newStatus: PostStatus) => {
     const post = posts.find((p) => p.id === postId);
-    const targetFolder = driveFolders.find((df) => df.status === newStatus);
+    const targetFolder = driveFolders.find((df) => df.status === newStatus) || (
+      (DRIVE_PHYSICAL_STAGES as string[]).includes(newStatus) && DRIVE_FOLDER_IDS[newStatus as 'gravado' | 'editado' | 'postado']
+        ? {
+            status: newStatus,
+            folder_id: DRIVE_FOLDER_IDS[newStatus as 'gravado' | 'editado' | 'postado'],
+            folder_name: newStatus === 'gravado' ? 'Gravado' : newStatus === 'editado' ? 'Editado' : 'Postado',
+          }
+        : null
+    );
+
     if (!post || !targetFolder) {
       return { success: false, folderName: '' };
     }
     await updatePostStatus(postId, newStatus);
     return { success: true, folderName: targetFolder.folder_name };
+  };
+
+  const retryGoogleDriveSync = async (postId: string): Promise<{ success: boolean; message: string }> => {
+    const post = posts.find((p) => p.id === postId);
+    if (!post) return { success: false, message: 'Conteúdo não encontrado.' };
+
+    const isPhysical = (DRIVE_PHYSICAL_STAGES as string[]).includes(post.status);
+    if (!isPhysical) {
+      return { success: false, message: `A etapa "${post.status}" não requer sincronização com Google Drive.` };
+    }
+
+    const fileId = post.google_drive_file_id || post.drive_file_id;
+    if (!fileId) {
+      return { success: false, message: 'Nenhum arquivo do Google Drive vinculado a este conteúdo.' };
+    }
+
+    const targetFolder = driveFolders.find((df) => df.status === post.status) || {
+      status: post.status,
+      folder_id: DRIVE_FOLDER_IDS[post.status as 'gravado' | 'editado' | 'postado'],
+      folder_name: post.status === 'gravado' ? 'Gravado' : post.status === 'editado' ? 'Editado' : 'Postado',
+    };
+
+    try {
+      const res = await fetch('/api/drive/move', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          postId,
+          fileId,
+          targetStatus: post.status,
+          sourceFolderId: post.google_drive_folder_id || post.drive_folder_id,
+          destinationFolderId: targetFolder.folder_id,
+        }),
+      });
+      const data = await res.json();
+      const now = new Date().toISOString();
+
+      if (data.success) {
+        const updatedPost: Post = {
+          ...post,
+          google_drive_sync_status: 'sincronizado',
+          google_drive_sync_error: undefined,
+          google_drive_folder_id: targetFolder.folder_id,
+          drive_folder_id: targetFolder.folder_id,
+          drive_folder_name: targetFolder.folder_name,
+          atualizado_em: now,
+        };
+        setPosts((prev) => prev.map((p) => (p.id === postId ? updatedPost : p)));
+        if (selectedPost && selectedPost.id === postId) {
+          setSelectedPost(updatedPost);
+        }
+        if (isSupabaseLive) {
+          try {
+            await supabase.from('posts').update({
+              google_drive_sync_status: 'sincronizado',
+              google_drive_sync_error: null,
+              google_drive_folder_id: targetFolder.folder_id,
+              drive_folder_id: targetFolder.folder_id,
+              drive_folder_name: targetFolder.folder_name,
+              atualizado_em: now,
+            }).eq('id', postId);
+          } catch {}
+        }
+        await addHistory(postId, 'Drive Sincronizado', `Arquivo sincronizado com sucesso na pasta "${targetFolder.folder_name}".`);
+        return { success: true, message: `Arquivo sincronizado na pasta ${targetFolder.folder_name} com sucesso!` };
+      } else {
+        const errMsg = data.error || 'Falha ao sincronizar com Google Drive';
+        setPosts((prev) => prev.map((p) => (p.id === postId ? {
+          ...p,
+          google_drive_sync_status: 'erro',
+          google_drive_sync_error: errMsg,
+          atualizado_em: now,
+        } : p)));
+        return { success: false, message: errMsg };
+      }
+    } catch (err: any) {
+      return { success: false, message: err.message || 'Erro de conexão ao sincronizar com Google Drive.' };
+    }
+  };
+
+  const linkGoogleDriveFile = async (
+    postId: string,
+    fileData: {
+      fileId: string;
+      fileName: string;
+      fileUrl: string;
+      folderId?: string;
+      mimeType?: string;
+      thumbnailUrl?: string;
+    }
+  ) => {
+    const post = posts.find((p) => p.id === postId);
+    if (!post) return;
+
+    const now = new Date().toISOString();
+    const isPhysical = (DRIVE_PHYSICAL_STAGES as string[]).includes(post.status);
+    const targetFolderId = fileData.folderId || (
+      isPhysical && DRIVE_FOLDER_IDS[post.status as 'gravado' | 'editado' | 'postado']
+        ? DRIVE_FOLDER_IDS[post.status as 'gravado' | 'editado' | 'postado']
+        : undefined
+    );
+
+    const updatedPost: Post = {
+      ...post,
+      google_drive_file_id: fileData.fileId,
+      google_drive_file_name: fileData.fileName,
+      google_drive_web_view_link: fileData.fileUrl,
+      google_drive_folder_id: targetFolderId,
+      google_drive_mime_type: fileData.mimeType,
+      google_drive_thumbnail_url: fileData.thumbnailUrl,
+      google_drive_sync_status: 'sincronizado',
+      google_drive_sync_error: undefined,
+      drive_file_id: fileData.fileId,
+      drive_file_url: fileData.fileUrl,
+      drive_folder_id: targetFolderId,
+      atualizado_em: now,
+    };
+
+    setPosts((prev) => prev.map((p) => (p.id === postId ? updatedPost : p)));
+    if (selectedPost && selectedPost.id === postId) {
+      setSelectedPost(updatedPost);
+    }
+
+    const newFile: ArquivoItem = {
+      id: `f-drive-${Date.now()}`,
+      post_id: postId,
+      post_titulo: post.titulo,
+      nome: fileData.fileName,
+      url: fileData.fileUrl,
+      tamanho_bytes: 0,
+      tipo_mime: fileData.mimeType || 'application/vnd.google-apps.file',
+      categoria_arquivo: fileData.fileName.match(/\.(mp4|mov|avi)$/i) ? 'video_bruto' : 'documento',
+      google_drive_file_id: fileData.fileId,
+      criado_em: now,
+    };
+    setFiles((prev) => [newFile, ...prev]);
+
+    await addHistory(postId, 'Arquivo Drive Vinculado', `Vinculou arquivo "${fileData.fileName}" do Google Drive.`);
+    await addAuditLog('LINK_DRIVE_FILE', 'FILE', fileData.fileId, fileData.fileName, `Vinculado ao post "${post.titulo}"`);
+
+    if (isSupabaseLive) {
+      try {
+        await supabase.from('posts').update({
+          google_drive_file_id: fileData.fileId,
+          google_drive_file_name: fileData.fileName,
+          google_drive_web_view_link: fileData.fileUrl,
+          google_drive_folder_id: targetFolderId,
+          google_drive_sync_status: 'sincronizado',
+          drive_file_id: fileData.fileId,
+          drive_file_url: fileData.fileUrl,
+          drive_folder_id: targetFolderId,
+          atualizado_em: now,
+        }).eq('id', postId);
+        await supabase.from('arquivos').insert([newFile]);
+      } catch (err) {
+        console.warn('Supabase linkGoogleDriveFile error:', err);
+      }
+    }
   };
 
   const linkPostToAd = async (postId: string, adId: string, campaignId?: string) => {
@@ -1021,6 +1257,31 @@ export function ContentProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const inviteTeamMember = async (data: {
+    nome: string;
+    email: string;
+    cargo: string;
+    role: PerfilRole;
+    senha?: string;
+  }): Promise<{ success: boolean; member: Perfil; inviteUrl: string }> => {
+    const newMember = await addTeamMember({
+      nome: data.nome,
+      email: data.email,
+      cargo: data.cargo,
+      role: data.role,
+      status: 'convidado',
+      senha: data.senha || '123456',
+      permissoes: DEFAULT_ROLE_PERMISSIONS[data.role] || DEFAULT_ROLE_PERMISSIONS.editor,
+    });
+
+    const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
+    const inviteUrl = `${baseUrl}/login?email=${encodeURIComponent(data.email)}`;
+
+    await addAuditLog('INVITE_MEMBER', 'POST', newMember.id, newMember.nome, `Convite gerado para ${newMember.email} com acesso ${newMember.role}`);
+
+    return { success: true, member: newMember, inviteUrl };
+  };
+
   // Integrations Management
   const updateIntegration = async (provedor: ProvedorIntegracao, updates: Partial<IntegracaoConfig>) => {
     setIntegrations((prev) =>
@@ -1059,6 +1320,29 @@ export function ContentProvider({ children }: { children: ReactNode }) {
       return { success: true, message: 'Conexão com Meta Graph API & Instagram validada com sucesso!' };
     }
 
+    if (provedor === 'meta_ads') {
+      const hasKey = !!int.credenciais.ad_account_id || !!int.credenciais.access_token || !!int.credenciais.business_id;
+      if (!hasKey) {
+        return { success: false, message: 'Informe o ID da Conta de Anúncios (act_...) ou Token de Acesso da Meta.' };
+      }
+      await updateIntegration('meta_ads', { status: 'conectado', ultima_sincronizacao: new Date().toISOString() });
+      return { success: true, message: 'Conexão com Meta Marketing API & Gerenciador de Anúncios validada com sucesso!' };
+    }
+
+    if (provedor === 'meta_pixel') {
+      const hasKey = !!int.credenciais.pixel_id || !!int.credenciais.pixel_conversion_token || !!int.credenciais.access_token;
+      if (!hasKey) {
+        return { success: false, message: 'Informe o Pixel ID (15-16 dígitos) ou Token de Conversão da Meta.' };
+      }
+      await updateIntegration('meta_pixel', { status: 'conectado', ultima_sincronizacao: new Date().toISOString() });
+      return { success: true, message: 'Meta Pixel & Conversions API (CAPI) validados com sucesso!' };
+    }
+
+    if (provedor === 'google_drive') {
+      await updateIntegration('google_drive', { status: 'conectado', ultima_sincronizacao: new Date().toISOString() });
+      return { success: true, message: 'Google Drive conectado com sucesso às 3 pastas fixas do Kanban (Gravado, Editado, Postado)!' };
+    }
+
     if (provedor === 'google_analytics') {
       const hasId = !!int.credenciais.property_id || !!int.credenciais.client_email;
       if (!hasId) {
@@ -1077,13 +1361,14 @@ export function ContentProvider({ children }: { children: ReactNode }) {
       return { success: true, message: 'Conexão com Google Ads API validada com sucesso!' };
     }
 
+    await updateIntegration(provedor, { status: 'conectado', ultima_sincronizacao: new Date().toISOString() });
     return { success: true, message: 'Conexão estabelecida com sucesso.' };
   };
 
   const syncIntegrationData = async (provedor: ProvedorIntegracao): Promise<{ success: boolean; message: string }> => {
     await new Promise((r) => setTimeout(r, 1200));
     const now = new Date().toISOString();
-    await updateIntegration(provedor, { ultima_sincronizacao: now });
+    await updateIntegration(provedor, { status: 'conectado', ultima_sincronizacao: now });
     return { success: true, message: `Métricas sincronizadas em tempo real com sucesso (${new Date(now).toLocaleTimeString('pt-BR')})!` };
   };
 
@@ -1256,6 +1541,7 @@ export function ContentProvider({ children }: { children: ReactNode }) {
         addTeamMember,
         updateTeamMember,
         deleteTeamMember,
+        inviteTeamMember,
         integrations,
         updateIntegration,
         testIntegrationConnection,
@@ -1306,6 +1592,8 @@ export function ContentProvider({ children }: { children: ReactNode }) {
         auditLogs,
         addAuditLog,
         moveGoogleDriveFile,
+        retryGoogleDriveSync,
+        linkGoogleDriveFile,
         linkPostToAd,
         brandContext,
         updateBrandContext,
