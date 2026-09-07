@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Perfil,
   PerfilRole,
@@ -8,6 +8,7 @@ import {
   PermissoesEquipe,
   DEFAULT_ROLE_PERMISSIONS,
 } from '@/types';
+import { processAvatarFile } from '@/lib/imageUtils';
 import {
   X,
   User,
@@ -24,6 +25,10 @@ import {
   Lock,
   Eye,
   EyeOff,
+  Upload,
+  Image as ImageIcon,
+  Trash2,
+  Camera,
 } from 'lucide-react';
 
 interface MemberModalProps {
@@ -61,6 +66,25 @@ export default function MemberModal({
   const [permissoes, setPermissoes] = useState<PermissoesEquipe>(DEFAULT_ROLE_PERMISSIONS.social_media);
   const [saving, setSaving] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadingPhoto(true);
+    setErrorMsg('');
+    try {
+      const optimized = await processAvatarFile(file, 320);
+      setAvatarUrl(optimized);
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Erro ao processar imagem.');
+    } finally {
+      setUploadingPhoto(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
 
   useEffect(() => {
     if (memberToEdit) {
@@ -278,18 +302,76 @@ export default function MemberModal({
             </div>
           </div>
 
-          {/* URL do Avatar (Opcional) */}
-          <div>
-            <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">
-              URL da Foto / Avatar (Opcional)
-            </label>
-            <input
-              type="url"
-              value={avatarUrl}
-              onChange={(e) => setAvatarUrl(e.target.value)}
-              placeholder="https://images.unsplash.com/... (Deixe em branco para gerar avatar automático)"
-              className="w-full rounded-lg bg-slate-900 border border-slate-700 px-3 py-2 text-xs text-slate-300 placeholder:text-slate-600 focus:outline-none focus:border-indigo-500 font-mono"
-            />
+          {/* Foto de Perfil (Upload de Arquivo) */}
+          <div className="rounded-xl bg-slate-900/80 border border-slate-800 p-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-semibold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+                <Camera className="h-3.5 w-3.5 text-indigo-400" />
+                Foto de Perfil (Arquivo)
+              </label>
+              <span className="text-[11px] text-slate-500">JPG, PNG ou WEBP (até 10MB)</span>
+            </div>
+
+            <div className="flex flex-col sm:flex-row items-center gap-4">
+              {/* Preview Avatar */}
+              <div className="relative group shrink-0">
+                <img
+                  src={
+                    avatarUrl ||
+                    (nome.trim()
+                      ? `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(nome)}`
+                      : 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150')
+                  }
+                  alt={nome || 'Preview do avatar'}
+                  className="h-16 w-16 rounded-full object-cover ring-2 ring-indigo-500/50 bg-slate-950 shadow-md"
+                />
+                {uploadingPhoto && (
+                  <div className="absolute inset-0 rounded-full bg-slate-950/70 flex items-center justify-center">
+                    <div className="h-4 w-4 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+                  </div>
+                )}
+              </div>
+
+              {/* Upload Action & Buttons */}
+              <div className="flex-1 w-full space-y-2">
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleFileSelect}
+                  accept="image/png,image/jpeg,image/jpg,image/webp,image/gif"
+                  className="hidden"
+                />
+
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={uploadingPhoto}
+                    className="flex items-center gap-2 px-3.5 py-2 rounded-lg bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/40 text-indigo-300 hover:text-white text-xs font-semibold transition-all active:scale-95 disabled:opacity-50 min-h-[38px]"
+                  >
+                    <Upload className="h-3.5 w-3.5" />
+                    <span>{avatarUrl ? 'Substituir Foto por Arquivo' : 'Escolher Arquivo do Computador'}</span>
+                  </button>
+
+                  {avatarUrl && (
+                    <button
+                      type="button"
+                      onClick={() => setAvatarUrl('')}
+                      className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-slate-700 hover:border-rose-500/40 hover:bg-rose-500/10 text-slate-400 hover:text-rose-300 text-xs font-medium transition-colors min-h-[38px]"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                      <span>Remover Foto</span>
+                    </button>
+                  )}
+                </div>
+
+                <p className="text-[11px] text-slate-400">
+                  {avatarUrl
+                    ? 'Foto personalizada carregada com sucesso. O arquivo é ajustado e otimizado automaticamente.'
+                    : 'Envie uma foto do colaborador a partir do seu computador. Se nenhuma for enviada, um avatar automático será gerado.'}
+                </p>
+              </div>
+            </div>
           </div>
 
           {/* Nível de Acesso (Presets de Cargo) */}

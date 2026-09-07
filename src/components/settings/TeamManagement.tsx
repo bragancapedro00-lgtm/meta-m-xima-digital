@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { useContent } from '@/lib/context/ContentContext';
 import { Perfil, StatusMembro } from '@/types';
 import MemberModal from './MemberModal';
+import SwitchProfileModal from '@/components/auth/SwitchProfileModal';
 import {
   Users,
   Plus,
@@ -39,6 +40,16 @@ export default function TeamManagement() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedMember, setSelectedMember] = useState<Perfil | null>(null);
   const [copiedMap, setCopiedMap] = useState<Record<string, boolean>>({});
+  const [switchTarget, setSwitchTarget] = useState<Perfil | null>(null);
+  const [isSwitchModalOpen, setIsSwitchModalOpen] = useState(false);
+
+  const handleConfirmSwitch = (target: Perfil) => {
+    setCurrentUser(target);
+    try {
+      localStorage.setItem('mmd_crm_session_v1', JSON.stringify(target));
+      localStorage.removeItem('mmd_crm_logged_out_v1');
+    } catch {}
+  };
 
   const handleCopyAccessLink = (email: string, id: string) => {
     const origin = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000';
@@ -170,12 +181,17 @@ export default function TeamManagement() {
         </div>
 
         <div className="flex items-center gap-2">
-          <label className="text-xs text-slate-400 whitespace-nowrap">Trocar usuário:</label>
+          <label className="text-xs text-slate-400 whitespace-nowrap">Trocar usuário (exige senha):</label>
           <select
             value={currentUser.id}
             onChange={(e) => {
-              const found = profiles.find((p) => p.id === e.target.value);
-              if (found) setCurrentUser(found);
+              const targetId = e.target.value;
+              if (targetId === currentUser.id) return;
+              const found = profiles.find((p) => p.id === targetId);
+              if (found) {
+                setSwitchTarget(found);
+                setIsSwitchModalOpen(true);
+              }
             }}
             className="rounded-lg bg-slate-800 border border-slate-700 px-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 min-h-[38px]"
           >
@@ -356,6 +372,15 @@ export default function TeamManagement() {
         onClose={() => setIsModalOpen(false)}
         onSave={handleSaveMember}
         memberToEdit={selectedMember}
+      />
+
+      {/* Switch Profile Modal with Password Protection */}
+      <SwitchProfileModal
+        isOpen={isSwitchModalOpen}
+        onClose={() => setIsSwitchModalOpen(false)}
+        currentUser={currentUser}
+        targetUser={switchTarget}
+        onConfirmSwitch={handleConfirmSwitch}
       />
     </div>
   );

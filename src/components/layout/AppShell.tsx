@@ -7,6 +7,9 @@ import { useContent } from '@/lib/context/ContentContext';
 import ContentModal from '@/components/content/ContentModal';
 import NewPostModal from '@/components/content/NewPostModal';
 import NewIdeaModal from '@/components/planning/NewIdeaModal';
+import SwitchProfileModal from '@/components/auth/SwitchProfileModal';
+import MemberModal from '@/components/settings/MemberModal';
+import { Perfil } from '@/types';
 import {
   LayoutDashboard,
   KanbanSquare,
@@ -24,6 +27,8 @@ import {
   X,
   ChevronDown,
   LogOut,
+  UserCog,
+  ShieldAlert,
 } from 'lucide-react';
 import { InstagramIcon } from '@/components/icons/BrandIcons';
 
@@ -51,6 +56,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     isSupabaseLive,
     currentUser,
     setCurrentUser,
+    updateTeamMember,
     profiles,
     isAuthenticated,
     logout,
@@ -58,6 +64,36 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
+  const [switchTarget, setSwitchTarget] = useState<Perfil | null>(null);
+  const [isSwitchModalOpen, setIsSwitchModalOpen] = useState(false);
+  const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
+
+  const handleInitiateSwitch = (target: Perfil) => {
+    if (target.id === currentUser.id) {
+      setProfileDropdownOpen(false);
+      return;
+    }
+    setSwitchTarget(target);
+    setIsSwitchModalOpen(true);
+    setProfileDropdownOpen(false);
+    setMobileMenuOpen(false);
+  };
+
+  const handleConfirmSwitch = (target: Perfil) => {
+    setCurrentUser(target);
+    try {
+      localStorage.setItem('mmd_crm_session_v1', JSON.stringify(target));
+      localStorage.removeItem('mmd_crm_logged_out_v1');
+    } catch {}
+  };
+
+  const handleSaveOwnProfile = async (
+    memberData: Omit<Perfil, 'id' | 'criado_em'>,
+    id?: string
+  ) => {
+    await updateTeamMember(id || currentUser.id, memberData);
+    setIsEditProfileOpen(false);
+  };
 
   // Authentication guard: if user is not authenticated and not on /login, redirect to /login
   useEffect(() => {
@@ -182,29 +218,44 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
           {/* Profile Switcher Dropdown */}
           {profileDropdownOpen && (
-            <div className="absolute bottom-full left-3 right-3 mb-2 rounded-lg bg-slate-900 border border-slate-800 shadow-xl p-1 z-30 space-y-1">
-              <div className="px-2.5 py-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                Alternar Membro da Equipe
+            <div className="absolute bottom-full left-3 right-3 mb-2 rounded-xl bg-slate-900 border border-slate-800 shadow-2xl p-1.5 z-30 space-y-1">
+              <div className="px-2.5 py-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center justify-between">
+                <span>Trocar de Conta</span>
+                <span className="text-[9px] text-indigo-400 font-normal lowercase">(exige senha)</span>
               </div>
               {profiles.map((p) => (
                 <button
                   key={p.id}
-                  onClick={() => {
-                    setCurrentUser(p);
-                    setProfileDropdownOpen(false);
-                  }}
-                  className={`flex w-full items-center gap-2 px-2.5 py-1.5 rounded text-xs transition-colors ${
+                  onClick={() => handleInitiateSwitch(p)}
+                  className={`flex w-full items-center justify-between px-2.5 py-1.5 rounded-lg text-xs transition-colors ${
                     currentUser.id === p.id
                       ? 'bg-indigo-600/20 text-indigo-300 font-semibold'
                       : 'text-slate-300 hover:bg-slate-800'
                   }`}
                 >
-                  <img src={p.avatar_url} alt={p.nome} className="h-5 w-5 rounded-full object-cover" />
-                  <span className="truncate">{p.nome}</span>
+                  <div className="flex items-center gap-2 min-w-0">
+                    <img src={p.avatar_url} alt={p.nome} className="h-5 w-5 rounded-full object-cover shrink-0" />
+                    <span className="truncate">{p.nome}</span>
+                  </div>
+                  {currentUser.id === p.id && (
+                    <span className="text-[10px] text-indigo-400 font-bold ml-1">Ativo</span>
+                  )}
                 </button>
               ))}
 
-              <div className="pt-1 mt-1 border-t border-slate-800">
+              <div className="pt-1 mt-1 border-t border-slate-800 space-y-0.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsEditProfileOpen(true);
+                    setProfileDropdownOpen(false);
+                  }}
+                  className="flex w-full items-center gap-2 px-2.5 py-2 rounded-lg text-xs text-indigo-300 hover:bg-indigo-500/10 transition-colors"
+                >
+                  <UserCog className="h-3.5 w-3.5" />
+                  <span>Editar Meu Perfil / Foto</span>
+                </button>
+
                 <button
                   type="button"
                   onClick={() => {
@@ -212,7 +263,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                     setProfileDropdownOpen(false);
                     router.push('/login');
                   }}
-                  className="flex w-full items-center gap-2 px-2.5 py-1.5 rounded text-xs text-rose-400 hover:bg-rose-500/10 transition-colors"
+                  className="flex w-full items-center gap-2 px-2.5 py-2 rounded-lg text-xs text-rose-400 hover:bg-rose-500/10 transition-colors"
                 >
                   <LogOut className="h-3.5 w-3.5" />
                   <span>Sair da Conta</span>
@@ -284,7 +335,57 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                 );
               })}
 
-              <div className="pt-2 mt-2 border-t border-slate-800">
+              <div className="pt-3 mt-3 border-t border-slate-800 space-y-3">
+                {/* Current User in Mobile Drawer */}
+                <div className="flex items-center justify-between p-2.5 rounded-xl bg-slate-900 border border-slate-800">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <img
+                      src={currentUser.avatar_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150'}
+                      alt={currentUser.nome}
+                      className="h-8 w-8 rounded-full object-cover ring-1 ring-slate-700 shrink-0"
+                    />
+                    <div className="truncate">
+                      <p className="text-xs font-bold text-slate-200 truncate">{currentUser.nome}</p>
+                      <p className="text-[10px] text-slate-400 uppercase tracking-wider">{currentUser.cargo}</p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsEditProfileOpen(true);
+                      setMobileMenuOpen(false);
+                    }}
+                    className="text-xs font-semibold text-indigo-400 bg-indigo-500/10 hover:bg-indigo-500/20 px-2.5 py-1.5 rounded-lg border border-indigo-500/20 transition-colors"
+                  >
+                    Editar Foto
+                  </button>
+                </div>
+
+                {/* Team Switcher in Mobile Drawer */}
+                <div className="space-y-1.5">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-1 flex items-center justify-between">
+                    <span>Alternar Perfil</span>
+                    <span className="text-indigo-400 lowercase font-normal">(exige senha)</span>
+                  </span>
+                  <div className="grid grid-cols-2 gap-1.5">
+                    {profiles.map((p) => (
+                      <button
+                        key={p.id}
+                        type="button"
+                        onClick={() => handleInitiateSwitch(p)}
+                        className={`flex items-center gap-2 p-2 rounded-lg text-xs transition-colors border ${
+                          currentUser.id === p.id
+                            ? 'bg-indigo-600/20 border-indigo-500/30 text-indigo-300 font-semibold'
+                            : 'bg-slate-900/60 border-slate-800 text-slate-300 hover:bg-slate-800'
+                        }`}
+                      >
+                        <img src={p.avatar_url} alt={p.nome} className="h-5 w-5 rounded-full object-cover shrink-0" />
+                        <span className="truncate">{p.nome.split(' ')[0]}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
                 <button
                   type="button"
                   onClick={() => {
@@ -376,6 +477,19 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       <ContentModal />
       <NewPostModal />
       <NewIdeaModal />
+      <SwitchProfileModal
+        isOpen={isSwitchModalOpen}
+        onClose={() => setIsSwitchModalOpen(false)}
+        currentUser={currentUser}
+        targetUser={switchTarget}
+        onConfirmSwitch={handleConfirmSwitch}
+      />
+      <MemberModal
+        isOpen={isEditProfileOpen}
+        onClose={() => setIsEditProfileOpen(false)}
+        onSave={handleSaveOwnProfile}
+        memberToEdit={currentUser}
+      />
     </div>
   );
 }

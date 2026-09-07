@@ -212,6 +212,14 @@ export function ContentProvider({ children }: { children: ReactNode }) {
     } catch {}
   }, [integrations]);
 
+  useEffect(() => {
+    try {
+      if (currentUser && isAuthenticated) {
+        localStorage.setItem(LOCAL_STORAGE_KEY_SESSION, JSON.stringify(currentUser));
+      }
+    } catch {}
+  }, [currentUser, isAuthenticated]);
+
   // Try to load real data from Supabase if configured
   useEffect(() => {
     if (!isSupabaseLive) return;

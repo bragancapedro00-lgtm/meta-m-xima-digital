@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, Suspense } from 'react';
+import React, { useState, useEffect, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useContent } from '@/lib/context/ContentContext';
 import { Perfil } from '@/types';
@@ -30,6 +30,8 @@ function LoginForm() {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [successUser, setSuccessUser] = useState<Perfil | null>(null);
+  const [selectedMemberName, setSelectedMemberName] = useState<string | null>(null);
+  const passwordInputRef = useRef<HTMLInputElement>(null);
 
   // Pre-fill email from query parameters (e.g., /login?email=pedro@metamaxima.com.br)
   useEffect(() => {
@@ -74,23 +76,14 @@ function LoginForm() {
     }
   };
 
-  const handleQuickLogin = async (member: Perfil) => {
-    const defaultPassword = member.senha || '123456';
+  const handleSelectAccount = (member: Perfil) => {
     setEmail(member.email);
-    setPassword(defaultPassword);
-    setLoading(true);
+    setPassword('');
     setErrorMsg('');
-
-    const res = await loginWithEmail(member.email, defaultPassword);
-    if (res.success && res.user) {
-      setSuccessUser(res.user);
-      setTimeout(() => {
-        router.push('/kanban');
-      }, 1000);
-    } else {
-      setLoading(false);
-      setErrorMsg(res.error || 'Erro ao entrar.');
-    }
+    setSelectedMemberName(member.nome);
+    setTimeout(() => {
+      passwordInputRef.current?.focus();
+    }, 100);
   };
 
   return (
@@ -159,6 +152,7 @@ function LoginForm() {
               </label>
               <div className="relative">
                 <input
+                  ref={passwordInputRef}
                   type={showPassword ? 'text' : 'password'}
                   required
                   value={password}
@@ -198,42 +192,59 @@ function LoginForm() {
           </form>
         )}
 
-        {/* Quick Access Simulator for Demo */}
+        {/* Quick Account Selector */}
         <div className="pt-4 border-t border-slate-800/80 space-y-3">
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
               <Users className="h-3.5 w-3.5 text-indigo-400" />
-              Acesso Rápido de Demonstração
+              Selecionar Conta de Colaborador
             </span>
-            <span className="text-[10px] text-slate-400 font-mono bg-slate-800 px-1.5 py-0.5 rounded border border-slate-700">
-              Senha padrão: 123456
+            <span className="text-[10px] text-amber-400 font-mono bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">
+              Exige senha individual
             </span>
           </div>
 
           <div className="grid grid-cols-2 gap-2">
-            {profiles.slice(0, 4).map((p) => (
-              <button
-                key={p.id}
-                type="button"
-                onClick={() => handleQuickLogin(p)}
-                className="flex items-center gap-2.5 p-2 rounded-lg bg-slate-950/60 border border-slate-800 hover:border-indigo-500/50 hover:bg-slate-800/50 text-left transition-all group min-h-[44px]"
-              >
-                <img
-                  src={p.avatar_url}
-                  alt={p.nome}
-                  className="h-7 w-7 rounded-full object-cover shrink-0 ring-1 ring-slate-700"
-                />
-                <div className="truncate">
-                  <p className="text-[11px] font-bold text-slate-200 group-hover:text-indigo-300 truncate">
-                    {p.nome.split(' ')[0]}
-                  </p>
-                  <p className="text-[10px] text-slate-400 uppercase tracking-wide truncate">
-                    {p.role}
-                  </p>
-                </div>
-              </button>
-            ))}
+            {profiles.slice(0, 4).map((p) => {
+              const isSelected = email.toLowerCase() === p.email.toLowerCase();
+              return (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={() => handleSelectAccount(p)}
+                  className={`flex items-center gap-2.5 p-2 rounded-lg border text-left transition-all group min-h-[44px] ${
+                    isSelected
+                      ? 'bg-indigo-600/20 border-indigo-500 shadow-sm'
+                      : 'bg-slate-950/60 border-slate-800 hover:border-slate-700 hover:bg-slate-900/60'
+                  }`}
+                >
+                  <img
+                    src={p.avatar_url}
+                    alt={p.nome}
+                    className={`h-7 w-7 rounded-full object-cover shrink-0 ring-1 ${
+                      isSelected ? 'ring-indigo-400' : 'ring-slate-700'
+                    }`}
+                  />
+                  <div className="truncate">
+                    <p className={`text-[11px] font-bold truncate ${
+                      isSelected ? 'text-indigo-300' : 'text-slate-200 group-hover:text-white'
+                    }`}>
+                      {p.nome.split(' ')[0]}
+                    </p>
+                    <p className="text-[10px] text-slate-400 uppercase tracking-wide truncate">
+                      {p.role}
+                    </p>
+                  </div>
+                </button>
+              );
+            })}
           </div>
+
+          {selectedMemberName && (
+            <p className="text-[11px] text-indigo-300 bg-indigo-500/10 border border-indigo-500/20 px-3 py-1.5 rounded-lg text-center">
+              Conta de <strong>{selectedMemberName}</strong> selecionada. Digite a senha acima para prosseguir.
+            </p>
+          )}
         </div>
       </div>
 
