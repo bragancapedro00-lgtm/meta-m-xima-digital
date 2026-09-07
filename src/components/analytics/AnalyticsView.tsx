@@ -1,6 +1,8 @@
 'use client';
 
 import React, { useState } from 'react';
+import { useContent } from '@/lib/context/ContentContext';
+import ConnectIntegrationModal from '@/components/settings/ConnectIntegrationModal';
 import {
   TrendingUp,
   Users,
@@ -14,16 +16,21 @@ import {
   Share2,
   MousePointerClick,
   Layers,
+  Key,
 } from 'lucide-react';
 
 export default function AnalyticsView() {
-  const [isConnected, setIsConnected] = useState(true);
+  const { integrations, syncIntegrationData } = useContent();
+  const gaIntegration = integrations.find((i) => i.provedor === 'google_analytics');
+  const isConnected = gaIntegration?.status === 'conectado';
+  const [isConfigModalOpen, setIsConfigModalOpen] = useState(false);
   const [period, setPeriod] = useState<'7d' | '30d' | '90d'>('30d');
   const [isSyncing, setIsSyncing] = useState(false);
 
-  const handleSync = () => {
+  const handleSync = async () => {
     setIsSyncing(true);
-    setTimeout(() => setIsSyncing(false), 1200);
+    await syncIntegrationData('google_analytics');
+    setIsSyncing(false);
   };
 
   const metrics = {
@@ -87,22 +94,23 @@ export default function AnalyticsView() {
           </p>
         </div>
 
-        {/* Demo Connection Switcher & Sync */}
-        <div className="flex items-center gap-3">
+        {/* Connection Controls & Sync */}
+        <div className="flex items-center gap-2.5">
           <button
-            onClick={() => setIsConnected(!isConnected)}
-            className="text-[11px] font-medium text-slate-400 hover:text-white bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-lg transition-colors"
+            onClick={() => setIsConfigModalOpen(true)}
+            className="flex items-center gap-1.5 bg-slate-900 border border-slate-700 hover:border-amber-500/50 hover:bg-slate-800 text-slate-200 px-3.5 py-2 rounded-lg text-xs font-semibold transition-all min-h-[38px]"
           >
-            {isConnected ? 'Simular Estado Desconectado' : 'Simular Estado Conectado'}
+            <Key className="h-3.5 w-3.5 text-amber-400" />
+            <span>{isConnected ? 'Editar Chaves do GA4' : 'Configurar Chaves do GA4'}</span>
           </button>
 
           {isConnected && (
             <button
               onClick={handleSync}
               disabled={isSyncing}
-              className="flex items-center gap-1.5 bg-slate-900 border border-slate-800 hover:bg-slate-800 text-slate-200 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors disabled:opacity-50"
+              className="flex items-center gap-1.5 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white px-3.5 py-2 rounded-lg text-xs font-semibold transition-all disabled:opacity-50 min-h-[38px] shadow-sm"
             >
-              <RefreshCw className={`h-3.5 w-3.5 ${isSyncing ? 'animate-spin text-cyan-400' : ''}`} />
+              <RefreshCw className={`h-3.5 w-3.5 ${isSyncing ? 'animate-spin' : ''}`} />
               <span>{isSyncing ? 'Atualizando...' : 'Atualizar GA4'}</span>
             </button>
           )}
@@ -139,14 +147,15 @@ export default function AnalyticsView() {
           </div>
 
           <button
-            onClick={() => setIsConnected(true)}
-            className="w-full rounded-xl bg-amber-600 hover:bg-amber-500 py-3 text-sm font-bold text-white shadow-lg shadow-amber-600/30 transition-all active:scale-95"
+            onClick={() => setIsConfigModalOpen(true)}
+            className="w-full flex items-center justify-center gap-2 rounded-xl bg-amber-600 hover:bg-amber-500 py-3 text-sm font-bold text-white shadow-lg shadow-amber-600/30 transition-all active:scale-95"
           >
-            Conectar Google Analytics 4
+            <Key className="h-4 w-4" />
+            <span>Inserir Chaves da API do Google Analytics 4</span>
           </button>
 
           <p className="text-[11px] text-slate-500 mt-3">
-            Autenticação via Google Cloud Console com escopo seguro <code className="text-slate-400">analytics.readonly</code>.
+            Autenticação via ID da Propriedade GA4 e Conta de Serviço do Google Cloud com escopo seguro <code className="text-slate-400">analytics.readonly</code>.
           </p>
         </div>
       ) : (
@@ -162,16 +171,31 @@ export default function AnalyticsView() {
               </div>
               <div>
                 <div className="flex items-center gap-2">
-                  <h3 className="text-base font-bold text-slate-100">metamaxima.com.br</h3>
+                  <h3 className="text-base font-bold text-slate-100">
+                    {gaIntegration?.credenciais?.property_id
+                      ? `Propriedade GA4: ${gaIntegration.credenciais.property_id}`
+                      : 'metamaxima.com.br'}
+                  </h3>
                   <span className="flex items-center gap-1 text-[10px] font-bold text-emerald-400 bg-emerald-500/15 px-2 py-0.5 rounded-full border border-emerald-500/25">
                     <ShieldCheck className="h-3 w-3" />
                     Propriedade GA4 Ativa
                   </span>
                 </div>
                 <p className="text-xs text-slate-400 mt-0.5">
-                  Stream ID: G-489302194 • Fluxo Web Principal • Conexão Google Cloud
+                  Stream ID: {gaIntegration?.credenciais?.measurement_id || 'G-XXXXXXXXXX'} • {gaIntegration?.credenciais?.client_email ? `Conta de Serviço: ${gaIntegration.credenciais.client_email} • ` : ''}
+                  Última sincronização: {gaIntegration?.ultima_sincronizacao ? new Date(gaIntegration.ultima_sincronizacao).toLocaleString('pt-BR') : 'Recentemente'}
                 </p>
               </div>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setIsConfigModalOpen(true)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-700 hover:border-amber-500/40 text-xs font-semibold text-slate-300 hover:text-white bg-slate-950 transition-colors"
+              >
+                <Key className="h-3.5 w-3.5 text-amber-400" />
+                <span>Editar Chaves GA4</span>
+              </button>
             </div>
 
             {/* Period Filters */}
@@ -322,6 +346,12 @@ export default function AnalyticsView() {
         </div>
       )}
 
+      {/* Modal de Conexão com Google Analytics 4 */}
+      <ConnectIntegrationModal
+        isOpen={isConfigModalOpen}
+        onClose={() => setIsConfigModalOpen(false)}
+        integration={gaIntegration || null}
+      />
     </div>
   );
 }

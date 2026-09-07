@@ -224,6 +224,34 @@ export default function ConnectIntegrationModal({
                   />
                 </div>
               </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
+                    Meta App ID (Opcional)
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.app_id || ''}
+                    onChange={(e) => handleChange('app_id', e.target.value)}
+                    placeholder="Ex: 123456789012345"
+                    className="w-full rounded-lg bg-slate-900 border border-slate-700 px-3.5 py-2.5 text-xs text-slate-100 font-mono focus:outline-none focus:border-indigo-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
+                    Meta App Secret (Opcional)
+                  </label>
+                  <input
+                    type="password"
+                    value={formData.app_secret || ''}
+                    onChange={(e) => handleChange('app_secret', e.target.value)}
+                    placeholder="Chave secreta do App Meta"
+                    className="w-full rounded-lg bg-slate-900 border border-slate-700 px-3.5 py-2.5 text-xs text-slate-100 font-mono focus:outline-none focus:border-indigo-500"
+                  />
+                </div>
+              </div>
             </>
           )}
 
@@ -276,6 +304,19 @@ export default function ConnectIntegrationModal({
                 <span className="text-[11px] text-slate-500 mt-1 block">
                   Adicione este e-mail como leitor na sua propriedade do Google Analytics.
                 </span>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
+                  Chave Privada / JSON da Conta de Serviço (Opcional)
+                </label>
+                <textarea
+                  rows={2}
+                  value={formData.private_key || ''}
+                  onChange={(e) => handleChange('private_key', e.target.value)}
+                  placeholder="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----"
+                  className="w-full rounded-lg bg-slate-900 border border-slate-700 px-3.5 py-2.5 text-xs text-slate-100 font-mono focus:outline-none focus:border-indigo-500 resize-none"
+                />
               </div>
             </>
           )}

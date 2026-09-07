@@ -1,6 +1,8 @@
 'use client';
 
 import React, { useState } from 'react';
+import { useContent } from '@/lib/context/ContentContext';
+import ConnectIntegrationModal from '@/components/settings/ConnectIntegrationModal';
 import {
   CheckCircle2,
   TrendingUp,
@@ -15,17 +17,22 @@ import {
   ShieldCheck,
   RefreshCw,
   Clock,
+  Key,
 } from 'lucide-react';
 import { InstagramIcon } from '@/components/icons/BrandIcons';
 
 export default function InstagramView() {
-  const [isConnected, setIsConnected] = useState(true);
+  const { integrations, syncIntegrationData } = useContent();
+  const metaIntegration = integrations.find((i) => i.provedor === 'meta_business');
+  const isConnected = metaIntegration?.status === 'conectado';
+  const [isConfigModalOpen, setIsConfigModalOpen] = useState(false);
   const [period, setPeriod] = useState<'7d' | '30d' | '90d'>('30d');
   const [isSyncing, setIsSyncing] = useState(false);
 
-  const handleSync = () => {
+  const handleSync = async () => {
     setIsSyncing(true);
-    setTimeout(() => setIsSyncing(false), 1200);
+    await syncIntegrationData('meta_business');
+    setIsSyncing(false);
   };
 
   // Metrics by period
@@ -78,22 +85,23 @@ export default function InstagramView() {
           </p>
         </div>
 
-        {/* Demo Connection Switcher & Sync */}
-        <div className="flex items-center gap-3">
+        {/* Connection Controls & Sync */}
+        <div className="flex items-center gap-2.5">
           <button
-            onClick={() => setIsConnected(!isConnected)}
-            className="text-[11px] font-medium text-slate-400 hover:text-white bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-lg transition-colors"
+            onClick={() => setIsConfigModalOpen(true)}
+            className="flex items-center gap-1.5 bg-slate-900 border border-slate-700 hover:border-pink-500/50 hover:bg-slate-800 text-slate-200 px-3.5 py-2 rounded-lg text-xs font-semibold transition-all min-h-[38px]"
           >
-            {isConnected ? 'Simular Estado Desconectado' : 'Simular Estado Conectado'}
+            <Key className="h-3.5 w-3.5 text-pink-400" />
+            <span>{isConnected ? 'Editar Chaves da API Meta' : 'Configurar Chaves da API'}</span>
           </button>
 
           {isConnected && (
             <button
               onClick={handleSync}
               disabled={isSyncing}
-              className="flex items-center gap-1.5 bg-slate-900 border border-slate-800 hover:bg-slate-800 text-slate-200 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors disabled:opacity-50"
+              className="flex items-center gap-1.5 bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-500 hover:to-purple-500 text-white px-3.5 py-2 rounded-lg text-xs font-semibold transition-all disabled:opacity-50 min-h-[38px] shadow-sm"
             >
-              <RefreshCw className={`h-3.5 w-3.5 ${isSyncing ? 'animate-spin text-pink-400' : ''}`} />
+              <RefreshCw className={`h-3.5 w-3.5 ${isSyncing ? 'animate-spin' : ''}`} />
               <span>{isSyncing ? 'Sincronizando...' : 'Sincronizar Dados'}</span>
             </button>
           )}
@@ -130,14 +138,15 @@ export default function InstagramView() {
           </div>
 
           <button
-            onClick={() => setIsConnected(true)}
-            className="w-full rounded-xl bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-500 hover:to-purple-500 py-3 text-sm font-bold text-white shadow-lg shadow-pink-600/30 transition-all active:scale-95"
+            onClick={() => setIsConfigModalOpen(true)}
+            className="w-full flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-500 hover:to-purple-500 py-3 text-sm font-bold text-white shadow-lg shadow-pink-600/30 transition-all active:scale-95"
           >
-            Conectar Conta do Instagram
+            <Key className="h-4 w-4" />
+            <span>Inserir Chaves da API do Instagram (Meta Graph API)</span>
           </button>
 
           <p className="text-[11px] text-slate-500 mt-3">
-            Requer permissões oficiais do Meta Business Suite: <code className="text-slate-400">instagram_basic</code> e <code className="text-slate-400">instagram_manage_insights</code>.
+            Requer Token de Acesso permanente e permissões oficiais do Meta Business Suite: <code className="text-slate-400">instagram_basic</code> e <code className="text-slate-400">instagram_manage_insights</code>.
           </p>
         </div>
       ) : (
@@ -155,16 +164,31 @@ export default function InstagramView() {
               />
               <div>
                 <div className="flex items-center gap-2">
-                  <h3 className="text-base font-bold text-slate-100">@metamaximadigital</h3>
+                  <h3 className="text-base font-bold text-slate-100">
+                    {metaIntegration?.credenciais?.ig_account_id
+                      ? `Instagram ID: ${metaIntegration.credenciais.ig_account_id}`
+                      : '@metamaximadigital'}
+                  </h3>
                   <span className="flex items-center gap-1 text-[10px] font-bold text-emerald-400 bg-emerald-500/15 px-2 py-0.5 rounded-full border border-emerald-500/25">
                     <ShieldCheck className="h-3 w-3" />
                     Conta Conectada
                   </span>
                 </div>
                 <p className="text-xs text-slate-400 mt-0.5">
-                  Conta Comercial • ID: 1784140582912409 • Última coleta há 15 minutos
+                  Conta Comercial • {metaIntegration?.credenciais?.business_id ? `BM: ${metaIntegration.credenciais.business_id} • ` : ''}
+                  Última sincronização: {metaIntegration?.ultima_sincronizacao ? new Date(metaIntegration.ultima_sincronizacao).toLocaleString('pt-BR') : 'Recentemente'}
                 </p>
               </div>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setIsConfigModalOpen(true)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-700 hover:border-pink-500/40 text-xs font-semibold text-slate-300 hover:text-white bg-slate-950 transition-colors"
+              >
+                <Key className="h-3.5 w-3.5 text-pink-400" />
+                <span>Editar Chaves / Token</span>
+              </button>
             </div>
 
             {/* Period Filters (7d, 30d, 90d) */}
@@ -332,6 +356,12 @@ export default function InstagramView() {
         </div>
       )}
 
+      {/* Modal de Conexão com Meta Graph API */}
+      <ConnectIntegrationModal
+        isOpen={isConfigModalOpen}
+        onClose={() => setIsConfigModalOpen(false)}
+        integration={metaIntegration || null}
+      />
     </div>
   );
 }
