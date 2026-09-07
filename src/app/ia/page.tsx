@@ -653,7 +653,7 @@ export default function AssistenteIAPage() {
               href="https://aistudio.google.com/app/apikey"
               target="_blank"
               rel="noreferrer"
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold transition-colors"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-amber-950 text-xs font-black transition-colors"
             >
               Obter Chave no Google AI Studio
               <ExternalLink className="w-3.5 h-3.5" />
@@ -1132,7 +1132,7 @@ export default function AssistenteIAPage() {
                                 });
                                 setActiveTool('roteiro');
                               }}
-                              className="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-blue-600 hover:text-white text-slate-300 text-xs flex items-center gap-1 transition-colors"
+                              className="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs flex items-center gap-1 transition-colors border border-slate-700"
                             >
                               <Video className="w-3.5 h-3.5" />
                               <span>Criar roteiro</span>
@@ -2769,7 +2769,7 @@ export default function AssistenteIAPage() {
                       className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 text-xs font-bold ${
                         msg.role === 'user'
                           ? 'bg-blue-600 text-white'
-                          : 'bg-gradient-to-br from-indigo-500 to-purple-600 text-white shadow-md'
+                          : 'bg-indigo-600 text-white shadow-sm border border-indigo-500/40'
                       }`}
                     >
                       {msg.role === 'user' ? 'Eu' : 'IA'}
@@ -2813,7 +2813,7 @@ export default function AssistenteIAPage() {
 
                 {isLoading && (
                   <div className="flex gap-3 max-w-xl">
-                    <div className="w-7 h-7 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 text-white flex items-center justify-center shrink-0 text-xs font-bold">
+                    <div className="w-7 h-7 rounded-full bg-indigo-600 text-white flex items-center justify-center shrink-0 text-xs font-bold shadow-sm border border-indigo-500/40">
                       IA
                     </div>
                     <div className="p-3.5 rounded-2xl bg-slate-900 border border-slate-800 text-xs text-slate-400 flex items-center gap-2">
