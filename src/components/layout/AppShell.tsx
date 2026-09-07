@@ -34,6 +34,7 @@ import {
   Radio,
   BarChart3,
   History,
+  Bot,
 } from 'lucide-react';
 import { InstagramIcon, FacebookIcon } from '@/components/icons/BrandIcons';
 
@@ -51,6 +52,7 @@ const NAV_GROUPS: NavGroup[] = [
     label: 'VISÃO GERAL',
     items: [
       { name: 'Dashboard', href: '/', icon: LayoutDashboard },
+      { name: 'Assistente de IA', href: '/ia', icon: Bot },
     ],
   },
   {

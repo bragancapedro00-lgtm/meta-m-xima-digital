@@ -775,3 +775,77 @@ create policy "Permitir leitura para todos" on public.meta_pixel_integrations fo
 create policy "Permitir leitura para todos" on public.meta_pixel_events for select using (true);
 create policy "Permitir leitura para todos" on public.audit_logs for select using (true);
 
+-- ==============================================================================
+-- 23. TABELAS DO ASSISTENTE DE IA (GEMINI INTEGRATION)
+-- ==============================================================================
+
+-- Contexto da Marca permanente para enriquecer prompts de IA
+create table if not exists public.brand_context (
+  id uuid default uuid_generate_v4() primary key,
+  project_id text default 'default',
+  nome_empresa text not null default 'Meta Máxima Digital',
+  nicho text not null default 'Marketing Digital & Tráfego Pago',
+  publico_alvo text not null default 'Empresários, infoprodutores e marcas que buscam escala em vendas',
+  persona text default 'Decisores de 28 a 50 anos focados em ROI, autoridade e conversão consistente',
+  produtos text default 'Consultoria de Escala, Gestão de Tráfego Pago, Produção de Conteúdo Estratégico',
+  servicos text default 'Gestão de Meta Ads, Google Ads, Funis de Conversão, Criativos de Alta Conversão',
+  diferenciais text default 'Estratégias baseadas em dados reais, criativos orientados a conversão e acompanhamento diário de ROI',
+  tom_de_voz text default 'Profissional, persuasivo, autoritário e direto ao ponto, sem enrolação',
+  palavras_obrigatorias text default 'escala, conversão, ROI, previsibilidade, autoridade',
+  palavras_proibidas text default 'fórmula mágica, enriquecer rápido, segredo infalível, hack',
+  cta_padrao text default 'Clique no link da bio para agendar um diagnóstico estratégico gratuito.',
+  regiao_atuacao text default 'Brasil e operações internacionais',
+  objetivos text default 'Geração de leads qualificados, fortalecimento de autoridade e conversão direta',
+  atualizado_em timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+-- Conversas do Assistente Livre
+create table if not exists public.ai_conversations (
+  id uuid default uuid_generate_v4() primary key,
+  user_id uuid references auth.users(id) on delete set null,
+  project_id text default 'default',
+  title text not null default 'Nova conversa',
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  updated_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+-- Mensagens individuais nas conversas do Assistente Livre
+create table if not exists public.ai_messages (
+  id uuid default uuid_generate_v4() primary key,
+  conversation_id uuid references public.ai_conversations(id) on delete cascade not null,
+  role text not null check (role in ('user', 'assistant', 'system')),
+  content text not null,
+  model text default 'gemini-3.6-flash',
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+-- Registro auditável de todas as gerações de IA no sistema
+create table if not exists public.ai_generations (
+  id uuid default uuid_generate_v4() primary key,
+  user_id uuid references auth.users(id) on delete set null,
+  project_id text default 'default',
+  type text not null check (type in ('ideias', 'roteiro', 'legenda', 'carrossel', 'anuncio', 'variacoes', 'melhorar', 'performance', 'estrategia', 'chat')),
+  input_context jsonb default '{}'::jsonb not null,
+  output text not null,
+  model text not null default 'gemini-3.6-flash',
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+-- Índices de performance
+create index if not exists idx_ai_conversations_user on public.ai_conversations(user_id);
+create index if not exists idx_ai_messages_conversation on public.ai_messages(conversation_id);
+create index if not exists idx_ai_generations_type on public.ai_generations(type);
+create index if not exists idx_ai_generations_created_at on public.ai_generations(created_at desc);
+
+-- RLS
+alter table public.brand_context enable row level security;
+alter table public.ai_conversations enable row level security;
+alter table public.ai_messages enable row level security;
+alter table public.ai_generations enable row level security;
+
+create policy "Permitir tudo para brand_context" on public.brand_context for all using (true) with check (true);
+create policy "Permitir tudo para ai_conversations" on public.ai_conversations for all using (true) with check (true);
+create policy "Permitir tudo para ai_messages" on public.ai_messages for all using (true) with check (true);
+create policy "Permitir tudo para ai_generations" on public.ai_generations for all using (true) with check (true);
+
+

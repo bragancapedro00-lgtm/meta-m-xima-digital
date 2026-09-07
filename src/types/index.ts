@@ -526,3 +526,224 @@ export interface FilterState {
   classificacao?: string; // 'todos' | 'organico' | 'patrocinado' | 'organico_patrocinado'
   uso_trafego_pago?: string; // 'todos' | UsoTrafegoPago
 }
+
+// ==============================================================================
+// ASSISTENTE DE IA - TIPAGENS E MODELOS DE DADOS
+// ==============================================================================
+
+export type AIToolType =
+  | 'ideias'
+  | 'roteiro'
+  | 'legenda'
+  | 'carrossel'
+  | 'anuncio'
+  | 'variacoes'
+  | 'melhorar'
+  | 'performance'
+  | 'estrategia'
+  | 'chat';
+
+export interface BrandContext {
+  id?: string;
+  nome_empresa: string;
+  nicho: string;
+  publico_alvo: string;
+  persona?: string;
+  produtos: string;
+  servicos?: string;
+  diferenciais?: string;
+  tom_de_voz: string;
+  palavras_obrigatorias?: string;
+  palavras_proibidas?: string;
+  cta_padrao?: string;
+  regiao_atuacao?: string;
+  objetivos?: string;
+  atualizado_em?: string;
+}
+
+export interface AIGeneration {
+  id: string;
+  user_id?: string;
+  project_id?: string;
+  type: AIToolType;
+  input_context: Record<string, unknown>;
+  output: string;
+  model: string;
+  created_at: string;
+}
+
+export interface AIConversation {
+  id: string;
+  user_id?: string;
+  project_id?: string;
+  title: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AIMessage {
+  id: string;
+  conversation_id: string;
+  role: 'user' | 'assistant' | 'system';
+  content: string;
+  model?: string;
+  created_at: string;
+}
+
+// Retorno estruturado para Gerar Ideias
+export interface GeneratedIdeaItem {
+  titulo: string;
+  hook: string;
+  conceito: string;
+  objetivo: string;
+  formato: string;
+  etapa_funil: EtapaFunil;
+  cta: string;
+  justificativa_estrategica: string;
+}
+
+// Retorno estruturado para Criar Roteiro
+export interface GeneratedScript {
+  titulo: string;
+  duracao: string;
+  hook: string;
+  desenvolvimento: string;
+  prova: string;
+  cta: string;
+  cenas: {
+    cena_numero: number;
+    indicacao_visual: string;
+    b_roll?: string;
+    texto_falado: string;
+    texto_na_tela?: string;
+    corte_direcao?: string;
+  }[];
+  cta_final: string;
+}
+
+// Retorno estruturado para Criar Legenda
+export interface GeneratedCaptionVersion {
+  versao: number;
+  titulo_chamada: string;
+  legenda: string;
+  cta: string;
+  hashtags: string[];
+}
+
+// Retorno estruturado para Criar Carrossel
+export interface GeneratedCarouselSlide {
+  slide_numero: number;
+  tipo: 'capa' | 'conteudo' | 'cta_final';
+  titulo: string;
+  texto: string;
+  sugestao_visual: string;
+}
+
+export interface GeneratedCarousel {
+  tema: string;
+  slides: GeneratedCarouselSlide[];
+  cta_final: string;
+}
+
+// Retorno estruturado para Criar Anúncio (Meta Ads)
+export interface GeneratedAdVariation {
+  nome_versao: string;
+  hook: string;
+  headline: string;
+  texto_principal: string;
+  cta: string;
+  conceito_criativo: string;
+}
+
+export interface GeneratedAd {
+  campanha_sugerida: string;
+  publico_sugerido: string;
+  formato: string;
+  headline_principal: string;
+  texto_principal: string;
+  cta: string;
+  roteiro_video?: string;
+  conceito_criativo: string;
+  variacoes: GeneratedAdVariation[];
+}
+
+// Retorno estruturado para Gerar Variações
+export interface GeneratedVariationItem {
+  id_versao: number;
+  tipo_variacao: string;
+  hook: string;
+  roteiro_resumo?: string;
+  legenda?: string;
+  cta: string;
+  conceito: string;
+  abordagem: string;
+}
+
+// Retorno estruturado para Melhorar Conteúdo
+export interface ContentImprovementAnalysis {
+  pontos_fortes: string[];
+  pontos_fracos: string[];
+  oportunidades: string[];
+  sugestooes: string[];
+  versao_melhorada: {
+    titulo?: string;
+    hook?: string;
+    corpo_conteudo: string;
+    cta?: string;
+  };
+}
+
+// Retorno estruturado para Analisar Performance
+export interface PerformanceAIAnalysis {
+  status_dados: 'dados_reais' | 'dados_insuficientes';
+  resumo: string;
+  pontos_positivos: string[];
+  pontos_negativos: string[];
+  padroes_identificados: string[];
+  conteudos_vencedores: {
+    titulo: string;
+    metrica_chave: string;
+    por_que_funcionou: string;
+  }[];
+  conteudos_abaixo_media: {
+    titulo: string;
+    metrica_problema: string;
+    o_que_corrigir: string;
+  }[];
+  recomendacoes: string[];
+  proximos_conteudos_recomendados: {
+    titulo: string;
+    formato: string;
+    etapa_funil: string;
+    motivo: string;
+  }[];
+}
+
+// Retorno estruturado para Gerar Estratégia
+export interface StrategyPlannedItem {
+  titulo: string;
+  formato: string;
+  etapa_funil: EtapaFunil;
+  pilar: string;
+  tema: string;
+  cta: string;
+}
+
+export interface MarketingStrategyPlan {
+  periodo: string;
+  objetivo_geral: string;
+  pilares_estrategicos: string[];
+  frequencia_sugerida: string;
+  distribuicao_formatos: string[];
+  temas_centrais: string[];
+  estrategia_funil: {
+    topo: string;
+    meio: string;
+    fundo: string;
+  };
+  sugestoes_anuncios: string[];
+  sugestoes_testes: string[];
+  ctas_recomendados: string[];
+  conteudos_planejados: StrategyPlannedItem[];
+}
+

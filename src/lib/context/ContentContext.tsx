@@ -25,6 +25,11 @@ import {
   MetaCreative,
   MetaPixelConfig,
   AuditLog,
+  BrandContext,
+  GeneratedIdeaItem,
+  GeneratedScript,
+  GeneratedCarousel,
+  GeneratedAd,
 } from '@/types';
 import {
   INITIAL_POSTS,
@@ -113,6 +118,14 @@ interface ContentContextType {
   ) => Promise<void>;
   moveGoogleDriveFile: (postId: string, newStatus: PostStatus) => Promise<{ success: boolean; folderName: string }>;
   linkPostToAd: (postId: string, adId: string, campaignId?: string) => Promise<void>;
+
+  // AI Assistant Integrations
+  brandContext: BrandContext;
+  updateBrandContext: (updates: Partial<BrandContext>) => Promise<void>;
+  saveAIIdeaToIdeas: (idea: GeneratedIdeaItem) => Promise<Ideia>;
+  saveAIScriptToPost: (script: GeneratedScript, targetStatus?: PostStatus) => Promise<Post>;
+  saveAICarouselToPost: (carousel: GeneratedCarousel) => Promise<Post>;
+  saveAIAdToCreative: (ad: GeneratedAd) => Promise<void>;
 }
 
 const DEFAULT_FILTERS: FilterState = {
@@ -142,6 +155,23 @@ const LOCAL_STORAGE_KEY_CAMPAIGNS = 'mmd_crm_campaigns_v1';
 const LOCAL_STORAGE_KEY_ADS = 'mmd_crm_ads_v1';
 const LOCAL_STORAGE_KEY_PIXEL = 'mmd_crm_pixel_v1';
 const LOCAL_STORAGE_KEY_AUDIT_LOGS = 'mmd_crm_audit_logs_v1';
+const LOCAL_STORAGE_KEY_BRAND_CONTEXT = 'mmd_crm_brand_context_v1';
+
+export const INITIAL_BRAND_CONTEXT: BrandContext = {
+  nome_empresa: 'Meta Máxima Digital',
+  nicho: 'Marketing Digital & Tráfego Pago',
+  publico_alvo: 'Empresários, infoprodutores e marcas que buscam escala em vendas',
+  persona: 'Decisores de 28 a 50 anos focados em ROI, autoridade e conversão consistente',
+  produtos: 'Consultoria de Escala, Gestão de Tráfego Pago, Produção de Conteúdo Estratégico',
+  servicos: 'Gestão de Meta Ads, Google Ads, Funis de Conversão, Criativos de Alta Conversão',
+  diferenciais: 'Estratégias baseadas em dados reais, criativos orientados a conversão e acompanhamento diário de ROI',
+  tom_de_voz: 'Profissional, persuasivo, autoritário e direto ao ponto, sem enrolação',
+  palavras_obrigatorias: 'escala, conversão, ROI, previsibilidade, autoridade',
+  palavras_proibidas: 'fórmula mágica, enriquecer rápido, segredo infalível, hack',
+  cta_padrao: 'Clique no link da bio para agendar um diagnóstico estratégico gratuito.',
+  regiao_atuacao: 'Brasil e operações internacionais',
+  objetivos: 'Geração de leads qualificados, fortalecimento de autoridade e conversão direta',
+};
 
 export function ContentProvider({ children }: { children: ReactNode }) {
   const [posts, setPosts] = useState<Post[]>(INITIAL_POSTS);
@@ -162,6 +192,7 @@ export function ContentProvider({ children }: { children: ReactNode }) {
   const [creatives, setCreatives] = useState<MetaCreative[]>(INITIAL_CREATIVES);
   const [pixelConfig, setPixelConfig] = useState<MetaPixelConfig>(INITIAL_PIXEL_CONFIG);
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>(INITIAL_AUDIT_LOGS);
+  const [brandContext, setBrandContext] = useState<BrandContext>(INITIAL_BRAND_CONTEXT);
 
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -215,6 +246,9 @@ export function ContentProvider({ children }: { children: ReactNode }) {
 
       const savedAuditLogs = localStorage.getItem(LOCAL_STORAGE_KEY_AUDIT_LOGS);
       if (savedAuditLogs) setAuditLogs(JSON.parse(savedAuditLogs));
+
+      const savedBrand = localStorage.getItem(LOCAL_STORAGE_KEY_BRAND_CONTEXT);
+      if (savedBrand) setBrandContext(JSON.parse(savedBrand));
 
       const wasLoggedOut = localStorage.getItem(LOCAL_STORAGE_KEY_LOGGED_OUT) === 'true';
       const savedSession = localStorage.getItem(LOCAL_STORAGE_KEY_SESSION);
@@ -1104,6 +1138,113 @@ export function ContentProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem(LOCAL_STORAGE_KEY_SESSION);
   };
 
+  // ==============================================================================
+  // AI ASSISTANT OPERATIONAL METHODS
+  // ==============================================================================
+
+  const updateBrandContext = async (updates: Partial<BrandContext>) => {
+    const updated = { ...brandContext, ...updates, atualizado_em: new Date().toISOString() };
+    setBrandContext(updated);
+    try {
+      localStorage.setItem(LOCAL_STORAGE_KEY_BRAND_CONTEXT, JSON.stringify(updated));
+    } catch {}
+
+    if (isSupabaseLive) {
+      try {
+        await supabase.from('brand_context').upsert({ project_id: 'default', ...updated });
+      } catch (err) {
+        console.warn('Erro ao salvar brand_context no Supabase:', err);
+      }
+    }
+
+    await addAuditLog('Contexto da Marca Atualizado', 'INTEGRATION', undefined, updated.nome_empresa, 'Diretrizes de IA atualizadas');
+  };
+
+  const saveAIIdeaToIdeas = async (item: GeneratedIdeaItem): Promise<Ideia> => {
+    const saved = await saveIdea({
+      titulo: item.titulo,
+      ideia: item.conceito,
+      gancho: item.hook,
+      objetivo: item.objetivo,
+      etapa_funil: item.etapa_funil || 'topo',
+      formato: item.formato || 'Reels/Vídeo',
+      cta: item.cta,
+      observacoes: `Justificativa Estratégica: ${item.justificativa_estrategica}`,
+      categoria: 'educacional',
+      prioridade: 'normal',
+      tags: ['Gerado com IA', item.formato || 'IA'],
+    });
+
+    await addAuditLog('Ideia de IA Salva', 'IDEA', saved.id, saved.titulo, 'Ideia gerada pelo Gemini salva no Banco');
+    return saved;
+  };
+
+  const saveAIScriptToPost = async (script: GeneratedScript, targetStatus: PostStatus = 'a_gravar'): Promise<Post> => {
+    const today = new Date().toISOString().split('T')[0];
+    const cenasText = script.cenas && script.cenas.length > 0
+      ? script.cenas
+          .map(
+            (c) =>
+              `[CENA ${c.cena_numero}] Visual: ${c.indicacao_visual} | Fala: "${c.texto_falado}" ${c.b_roll ? `| B-Roll: ${c.b_roll}` : ''} ${c.texto_na_tela ? `| Texto Tela: ${c.texto_na_tela}` : ''}`
+          )
+          .join('\n\n')
+      : '';
+
+    const saved = await savePost({
+      titulo: script.titulo,
+      data_publicacao: today,
+      status: targetStatus,
+      tipo: 'reels_video',
+      gancho: script.hook,
+      roteiro_desenvolvimento: script.desenvolvimento,
+      roteiro_prova: script.prova,
+      cta: script.cta || script.cta_final,
+      observacoes: `Duração Estimada: ${script.duracao}\n\nDetalhamento de Cenas:\n${cenasText}`,
+      tags: ['Roteiro IA', 'Gemini'],
+    });
+
+    await addAuditLog('Roteiro de IA Salvo', 'POST', saved.id, saved.titulo, `Roteiro salvo como conteúdo em ${targetStatus}`);
+    return saved;
+  };
+
+  const saveAICarouselToPost = async (carousel: GeneratedCarousel): Promise<Post> => {
+    const today = new Date().toISOString().split('T')[0];
+    const slidesText = carousel.slides
+      .map((s) => `[SLIDE ${s.slide_numero} - ${s.tipo.toUpperCase()}]\nTítulo: ${s.titulo}\nTexto: ${s.texto}\nVisual: ${s.sugestao_visual}`)
+      .join('\n\n---\n\n');
+
+    const saved = await savePost({
+      titulo: carousel.tema,
+      data_publicacao: today,
+      status: 'a_gravar',
+      tipo: 'carrossel',
+      cta: carousel.cta_final,
+      legenda: `Tema: ${carousel.tema}\n\n${slidesText}`,
+      tags: ['Carrossel IA', 'Gemini'],
+    });
+
+    await addAuditLog('Carrossel de IA Salvo', 'POST', saved.id, saved.titulo, 'Carrossel estruturado salvo no Kanban');
+    return saved;
+  };
+
+  const saveAIAdToCreative = async (ad: GeneratedAd): Promise<void> => {
+    const newCreative: MetaCreative = {
+      id: `cr-ai-${Date.now()}`,
+      name: `Criativo IA - ${ad.headline_principal.slice(0, 30)}`,
+      title: ad.headline_principal,
+      body: ad.texto_principal,
+      format: ad.formato || 'Reels 9:16',
+    };
+
+    const updatedCreatives = [newCreative, ...creatives];
+    setCreatives(updatedCreatives);
+    try {
+      localStorage.setItem('mmd_crm_creatives_v1', JSON.stringify(updatedCreatives));
+    } catch {}
+
+    await addAuditLog('Criativo de IA Salvo', 'AD', newCreative.id, newCreative.name, 'Criativo de anúncio salvo na central de anúncios');
+  };
+
   return (
     <ContentContext.Provider
       value={{
@@ -1166,6 +1307,12 @@ export function ContentProvider({ children }: { children: ReactNode }) {
         addAuditLog,
         moveGoogleDriveFile,
         linkPostToAd,
+        brandContext,
+        updateBrandContext,
+        saveAIIdeaToIdeas,
+        saveAIScriptToPost,
+        saveAICarouselToPost,
+        saveAIAdToCreative,
       }}
     >
       {children}
