@@ -8,6 +8,7 @@ import {
   PermissoesEquipe,
   DEFAULT_ROLE_PERMISSIONS,
 } from '@/types';
+import { useContent } from '@/lib/context/ContentContext';
 import { processAvatarFile } from '@/lib/imageUtils';
 import {
   X,
@@ -26,9 +27,9 @@ import {
   Eye,
   EyeOff,
   Upload,
-  Image as ImageIcon,
   Trash2,
   Camera,
+  AlertCircle,
 } from 'lucide-react';
 
 interface MemberModalProps {
@@ -39,11 +40,11 @@ interface MemberModalProps {
 }
 
 const ROLES_INFO: { role: PerfilRole; label: string; desc: string }[] = [
-  { role: 'admin', label: 'Administrador', desc: 'Acesso total a todas as funções, equipe e integrações' },
-  { role: 'gestor', label: 'Gestor de Operações', desc: 'Gerencia conteúdos, aprovações, métricas e conexões' },
-  { role: 'social_media', label: 'Social Media / Copy', desc: 'Cria conteúdos, roteiros, agenda e visualiza métricas' },
+  { role: 'admin', label: 'Administrador', desc: 'Acesso total a todas as funções, equipe e configurações' },
+  { role: 'gestor', label: 'Gestor de Operações', desc: 'Gerencia conteúdos, aprovações e relatórios' },
+  { role: 'social_media', label: 'Social Media / Copy', desc: 'Cria conteúdos, roteiros, agenda e visualiza relatórios' },
   { role: 'editor', label: 'Editor Audiovisual', desc: 'Edita roteiros, move cards no pipeline e sobe mídias' },
-  { role: 'visualizador', label: 'Visualizador / Cliente', desc: 'Acesso somente leitura a métricas e relatórios' },
+  { role: 'visualizador', label: 'Visualizador / Cliente', desc: 'Acesso somente leitura a conteúdos e relatórios' },
   { role: 'personalizado', label: 'Personalizado', desc: 'Permissões customizadas individualmente' },
 ];
 
@@ -54,6 +55,7 @@ export default function MemberModal({
   memberToEdit,
 }: MemberModalProps) {
   const isEditing = !!memberToEdit;
+  const { profiles } = useContent();
 
   const [nome, setNome] = useState('');
   const [email, setEmail] = useState('');
@@ -132,10 +134,23 @@ export default function MemberModal({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!nome.trim() || !email.trim()) return;
+    if (!nome.trim() || !email.trim()) {
+      setErrorMsg('Por favor, preencha o nome e o e-mail do colaborador.');
+      return;
+    }
 
-    if (!isEditing && !senha.trim()) {
-      setErrorMsg('Por favor, defina uma senha de acesso para o novo colaborador.');
+    const cleanEmail = email.trim().toLowerCase();
+    if (!cleanEmail.includes('@') || !cleanEmail.includes('.')) {
+      setErrorMsg('Por favor, informe um endereço de e-mail válido.');
+      return;
+    }
+
+    // Check if email already exists in another profile
+    const emailAlreadyTaken = profiles.some(
+      (p) => p.email?.trim().toLowerCase() === cleanEmail && (!isEditing || p.id !== memberToEdit?.id)
+    );
+    if (emailAlreadyTaken) {
+      setErrorMsg('Este e-mail já está cadastrado para outro membro da equipe.');
       return;
     }
 
@@ -147,7 +162,7 @@ export default function MemberModal({
       await onSave(
         {
           nome: nome.trim(),
-          email: email.trim(),
+          email: cleanEmail,
           cargo: cargo.trim() || 'Membro da Equipe',
           role,
           status,
@@ -158,6 +173,8 @@ export default function MemberModal({
         memberToEdit?.id
       );
       onClose();
+    } catch (err: any) {
+      setErrorMsg(err?.message || 'Erro ao salvar colaborador.');
     } finally {
       setSaving(false);
     }
@@ -172,27 +189,27 @@ export default function MemberModal({
       aria-labelledby="member-modal-title"
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm overflow-y-auto"
     >
-      <div className="relative w-full max-w-2xl rounded-2xl bg-[#0f172a] border border-slate-800 shadow-2xl p-6 md:p-8 my-8 text-slate-100 max-h-[92vh] overflow-y-auto">
+      <div className="relative w-full max-w-2xl rounded-2xl bg-zinc-950 border border-zinc-800 shadow-2xl p-6 md:p-8 my-8 text-zinc-100 max-h-[92vh] overflow-y-auto">
         {/* Close Button */}
         <button
           type="button"
           onClick={onClose}
           aria-label="Fechar formulário de membro"
-          className="absolute right-4 top-4 p-2 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors"
+          className="absolute right-4 top-4 p-2 text-zinc-400 hover:text-white rounded-lg hover:bg-zinc-800 transition-colors"
         >
           <X className="h-5 w-5" />
         </button>
 
         {/* Modal Header */}
         <div className="flex items-center gap-3 mb-6">
-          <div className="p-3 rounded-xl bg-indigo-600/20 text-indigo-400 border border-indigo-500/20">
-            <Users2 className="h-6 w-6" />
+          <div className="p-3 rounded-xl bg-zinc-800 text-zinc-200 border border-zinc-700">
+            <Users2 className="h-6 w-6 text-white" />
           </div>
           <div>
             <h2 id="member-modal-title" className="text-xl font-bold text-white">
               {isEditing ? 'Editar Membro & Permissões' : 'Adicionar Novo Membro da Equipe'}
             </h2>
-            <p className="text-xs text-slate-400 mt-0.5">
+            <p className="text-xs text-zinc-400 mt-0.5">
               Defina o perfil de acesso e personalize detalhadamente as atividades autorizadas.
             </p>
           </div>
@@ -200,8 +217,8 @@ export default function MemberModal({
 
         {/* Error Alert */}
         {errorMsg && (
-          <div className="mb-4 p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs flex items-center gap-2">
-            <Shield className="h-4 w-4 text-rose-400 shrink-0" />
+          <div className="mb-4 p-3 rounded-xl bg-rose-950/40 border border-rose-800/60 text-rose-300 text-xs flex items-center gap-2">
+            <AlertCircle className="h-4 w-4 text-rose-400 shrink-0" />
             <span>{errorMsg}</span>
           </div>
         )}
@@ -210,8 +227,8 @@ export default function MemberModal({
           {/* Dados Básicos */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
-                <User className="h-3.5 w-3.5 text-slate-400" />
+              <label className="block text-xs font-semibold text-zinc-300 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                <User className="h-3.5 w-3.5 text-zinc-400" />
                 Nome Completo *
               </label>
               <input
@@ -220,13 +237,13 @@ export default function MemberModal({
                 value={nome}
                 onChange={(e) => setNome(e.target.value)}
                 placeholder="Ex: Rafael Medeiros"
-                className="w-full rounded-lg bg-slate-900 border border-slate-700 px-3.5 py-2.5 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:border-indigo-500 transition-colors min-h-[44px]"
+                className="w-full rounded-lg bg-zinc-900 border border-zinc-700 px-3.5 py-2.5 text-sm text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:border-zinc-500 transition-colors min-h-[44px]"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
-                <Mail className="h-3.5 w-3.5 text-slate-400" />
+              <label className="block text-xs font-semibold text-zinc-300 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                <Mail className="h-3.5 w-3.5 text-zinc-400" />
                 E-mail Corporativo *
               </label>
               <input
@@ -235,13 +252,13 @@ export default function MemberModal({
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="Ex: rafael@metamaxima.com.br"
-                className="w-full rounded-lg bg-slate-900 border border-slate-700 px-3.5 py-2.5 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:border-indigo-500 transition-colors min-h-[44px]"
+                className="w-full rounded-lg bg-zinc-900 border border-zinc-700 px-3.5 py-2.5 text-sm text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:border-zinc-500 transition-colors min-h-[44px]"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
-                <Briefcase className="h-3.5 w-3.5 text-slate-400" />
+              <label className="block text-xs font-semibold text-zinc-300 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                <Briefcase className="h-3.5 w-3.5 text-zinc-400" />
                 Cargo / Especialidade
               </label>
               <input
@@ -249,36 +266,33 @@ export default function MemberModal({
                 value={cargo}
                 onChange={(e) => setCargo(e.target.value)}
                 placeholder="Ex: Editor de Vídeo, Copywriter, Designer"
-                className="w-full rounded-lg bg-slate-900 border border-slate-700 px-3.5 py-2.5 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:border-indigo-500 transition-colors min-h-[44px]"
+                className="w-full rounded-lg bg-zinc-900 border border-zinc-700 px-3.5 py-2.5 text-sm text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:border-zinc-500 transition-colors min-h-[44px]"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5 flex items-center justify-between">
+              <label className="block text-xs font-semibold text-zinc-300 uppercase tracking-wider mb-1.5 flex items-center justify-between">
                 <span className="flex items-center gap-1.5">
-                  <Lock className="h-3.5 w-3.5 text-slate-400" />
-                  Senha de Acesso {isEditing ? '(Opcional)' : '*'}
+                  <Lock className="h-3.5 w-3.5 text-zinc-400" />
+                  Senha de Acesso {isEditing ? '(Opcional)' : '(Padrão: 123456)'}
                 </span>
-                {isEditing && (
-                  <span className="text-[10px] text-slate-500 normal-case">
-                    Vazia = mantém atual
-                  </span>
-                )}
+                <span className="text-[10px] text-zinc-500 normal-case">
+                  {isEditing ? 'Vazia = mantém atual' : 'Se vazia, será 123456'}
+                </span>
               </label>
               <div className="relative">
                 <input
                   type={showSenha ? 'text' : 'password'}
-                  required={!isEditing}
                   value={senha}
                   onChange={(e) => setSenha(e.target.value)}
-                  placeholder={isEditing ? '•••••••• (manter existente)' : 'Criar senha (ex: 123456)'}
-                  className="w-full rounded-lg bg-slate-900 border border-slate-700 pl-3.5 pr-11 py-2.5 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:border-indigo-500 transition-colors min-h-[44px] font-mono"
+                  placeholder={isEditing ? '•••••••• (manter existente)' : '123456 (ou personalize)'}
+                  className="w-full rounded-lg bg-zinc-900 border border-zinc-700 pl-3.5 pr-11 py-2.5 text-sm text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:border-zinc-500 transition-colors min-h-[44px] font-mono"
                 />
                 <button
                   type="button"
                   onClick={() => setShowSenha(!showSenha)}
                   aria-label={showSenha ? 'Ocultar senha' : 'Ver senha'}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1.5 text-slate-400 hover:text-slate-200 transition-colors rounded"
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1.5 text-zinc-400 hover:text-zinc-200 transition-colors rounded"
                 >
                   {showSenha ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
@@ -286,14 +300,14 @@ export default function MemberModal({
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
-                <CheckCircle2 className="h-3.5 w-3.5 text-slate-400" />
+              <label className="block text-xs font-semibold text-zinc-300 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                <CheckCircle2 className="h-3.5 w-3.5 text-zinc-400" />
                 Status da Conta
               </label>
               <select
                 value={status}
                 onChange={(e) => setStatus(e.target.value as StatusMembro)}
-                className="w-full rounded-lg bg-slate-900 border border-slate-700 px-3.5 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-indigo-500 transition-colors min-h-[44px]"
+                className="w-full rounded-lg bg-zinc-900 border border-zinc-700 px-3.5 py-2.5 text-sm text-zinc-100 focus:outline-none focus:border-zinc-500 transition-colors min-h-[44px]"
               >
                 <option value="ativo">🟢 Ativo (Acesso Imediato)</option>
                 <option value="convidado">🟡 Convidado (Pendente aceite)</option>
@@ -303,13 +317,13 @@ export default function MemberModal({
           </div>
 
           {/* Foto de Perfil (Upload de Arquivo) */}
-          <div className="rounded-xl bg-slate-900/80 border border-slate-800 p-4 space-y-3">
+          <div className="rounded-xl bg-zinc-900/80 border border-zinc-800 p-4 space-y-3">
             <div className="flex items-center justify-between">
-              <label className="text-xs font-semibold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
-                <Camera className="h-3.5 w-3.5 text-indigo-400" />
+              <label className="text-xs font-semibold text-zinc-300 uppercase tracking-wider flex items-center gap-1.5">
+                <Camera className="h-3.5 w-3.5 text-zinc-300" />
                 Foto de Perfil (Arquivo)
               </label>
-              <span className="text-[11px] text-slate-500">JPG, PNG ou WEBP (até 10MB)</span>
+              <span className="text-[11px] text-zinc-500">JPG, PNG ou WEBP (até 10MB)</span>
             </div>
 
             <div className="flex flex-col sm:flex-row items-center gap-4">
@@ -323,11 +337,11 @@ export default function MemberModal({
                       : 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150')
                   }
                   alt={nome || 'Preview do avatar'}
-                  className="h-16 w-16 rounded-full object-cover ring-2 ring-indigo-500/50 bg-slate-950 shadow-md"
+                  className="h-16 w-16 rounded-full object-cover ring-2 ring-zinc-700 bg-zinc-950 shadow-md"
                 />
                 {uploadingPhoto && (
-                  <div className="absolute inset-0 rounded-full bg-slate-950/70 flex items-center justify-center">
-                    <div className="h-4 w-4 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+                  <div className="absolute inset-0 rounded-full bg-zinc-950/70 flex items-center justify-center">
+                    <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                   </div>
                 )}
               </div>
@@ -347,7 +361,7 @@ export default function MemberModal({
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
                     disabled={uploadingPhoto}
-                    className="flex items-center gap-2 px-3.5 py-2 rounded-lg bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/40 text-indigo-300 hover:text-white text-xs font-semibold transition-all active:scale-95 disabled:opacity-50 min-h-[38px]"
+                    className="flex items-center gap-2 px-3.5 py-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-zinc-200 hover:text-white text-xs font-semibold transition-all active:scale-95 disabled:opacity-50 min-h-[38px]"
                   >
                     <Upload className="h-3.5 w-3.5" />
                     <span>{avatarUrl ? 'Substituir Foto por Arquivo' : 'Escolher Arquivo do Computador'}</span>
@@ -357,7 +371,7 @@ export default function MemberModal({
                     <button
                       type="button"
                       onClick={() => setAvatarUrl('')}
-                      className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-slate-700 hover:border-rose-500/40 hover:bg-rose-500/10 text-slate-400 hover:text-rose-300 text-xs font-medium transition-colors min-h-[38px]"
+                      className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-zinc-700 hover:border-rose-500/40 hover:bg-rose-500/10 text-zinc-400 hover:text-rose-300 text-xs font-medium transition-colors min-h-[38px]"
                     >
                       <Trash2 className="h-3.5 w-3.5" />
                       <span>Remover Foto</span>
@@ -365,7 +379,7 @@ export default function MemberModal({
                   )}
                 </div>
 
-                <p className="text-[11px] text-slate-400">
+                <p className="text-[11px] text-zinc-400">
                   {avatarUrl
                     ? 'Foto personalizada carregada com sucesso. O arquivo é ajustado e otimizado automaticamente.'
                     : 'Envie uma foto do colaborador a partir do seu computador. Se nenhuma for enviada, um avatar automático será gerado.'}
@@ -376,8 +390,8 @@ export default function MemberModal({
 
           {/* Nível de Acesso (Presets de Cargo) */}
           <div>
-            <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-              <Shield className="h-3.5 w-3.5 text-indigo-400" />
+            <label className="block text-xs font-semibold text-zinc-300 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+              <Shield className="h-3.5 w-3.5 text-blue-400" />
               Função Base (Presets de Permissões)
             </label>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
@@ -388,15 +402,15 @@ export default function MemberModal({
                   onClick={() => handleRoleChange(item.role)}
                   className={`flex flex-col text-left p-3 rounded-xl border transition-all ${
                     role === item.role
-                      ? 'bg-indigo-600/20 border-indigo-500 text-white shadow-sm'
-                      : 'bg-slate-900/80 border-slate-800 text-slate-300 hover:border-slate-700'
+                      ? 'bg-zinc-800 border-zinc-500 text-white shadow-sm ring-1 ring-zinc-500'
+                      : 'bg-zinc-900/80 border-zinc-800 text-zinc-300 hover:border-zinc-700'
                   }`}
                 >
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-bold">{item.label}</span>
-                    {role === item.role && <Check className="h-3.5 w-3.5 text-indigo-400" />}
+                    {role === item.role && <Check className="h-3.5 w-3.5 text-blue-400" />}
                   </div>
-                  <span className="text-[11px] text-slate-400 mt-1 leading-snug">
+                  <span className="text-[11px] text-zinc-400 mt-1 leading-snug">
                     {item.desc}
                   </span>
                 </button>
@@ -405,10 +419,10 @@ export default function MemberModal({
           </div>
 
           {/* Matriz Granular de Permissões de Atividades */}
-          <div className="rounded-xl bg-slate-900/90 border border-slate-800 p-4 space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-              <span className="text-xs font-bold uppercase tracking-wider text-slate-200 flex items-center gap-1.5">
-                <SlidersHorizontal className="h-4 w-4 text-indigo-400" />
+          <div className="rounded-xl bg-zinc-900/90 border border-zinc-800 p-4 space-y-4">
+            <div className="flex items-center justify-between border-b border-zinc-800 pb-2">
+              <span className="text-xs font-bold uppercase tracking-wider text-zinc-200 flex items-center gap-1.5">
+                <SlidersHorizontal className="h-4 w-4 text-blue-400" />
                 Permissões Detalhadas de Atividades
               </span>
               {role === 'personalizado' ? (
@@ -416,45 +430,45 @@ export default function MemberModal({
                   Modo Customizado
                 </span>
               ) : (
-                <span className="text-[10px] font-medium text-slate-400">
-                  Baseado em: <strong className="text-slate-200 uppercase">{role}</strong>
+                <span className="text-[10px] font-medium text-zinc-400">
+                  Baseado em: <strong className="text-zinc-200 uppercase">{role}</strong>
                 </span>
               )}
             </div>
 
             {/* Grupo 1: Criação & Conteúdo */}
             <div className="space-y-2">
-              <h4 className="text-[11px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+              <h4 className="text-[11px] font-bold uppercase tracking-wider text-zinc-400 flex items-center gap-1.5">
                 <FileEdit className="h-3.5 w-3.5 text-blue-400" />
                 Conteúdo & Ideias
               </h4>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-                <label className="flex items-center gap-2.5 p-2 rounded-lg bg-slate-950/60 border border-slate-800/80 cursor-pointer hover:border-slate-700">
+                <label className="flex items-center gap-2.5 p-2 rounded-lg bg-zinc-950/60 border border-zinc-800/80 cursor-pointer hover:border-zinc-700">
                   <input
                     type="checkbox"
                     checked={permissoes.canCreateContent}
                     onChange={() => handleTogglePermission('canCreateContent')}
-                    className="rounded border-slate-700 text-indigo-600 focus:ring-0 h-4 w-4"
+                    className="rounded border-zinc-700 text-blue-600 focus:ring-0 h-4 w-4"
                   />
                   <span>Criar novos conteúdos e ideias</span>
                 </label>
 
-                <label className="flex items-center gap-2.5 p-2 rounded-lg bg-slate-950/60 border border-slate-800/80 cursor-pointer hover:border-slate-700">
+                <label className="flex items-center gap-2.5 p-2 rounded-lg bg-zinc-950/60 border border-zinc-800/80 cursor-pointer hover:border-zinc-700">
                   <input
                     type="checkbox"
                     checked={permissoes.canEditContent}
                     onChange={() => handleTogglePermission('canEditContent')}
-                    className="rounded border-slate-700 text-indigo-600 focus:ring-0 h-4 w-4"
+                    className="rounded border-zinc-700 text-blue-600 focus:ring-0 h-4 w-4"
                   />
                   <span>Editar roteiros, ganchos e prazos</span>
                 </label>
 
-                <label className="flex items-center gap-2.5 p-2 rounded-lg bg-slate-950/60 border border-slate-800/80 cursor-pointer hover:border-slate-700">
+                <label className="flex items-center gap-2.5 p-2 rounded-lg bg-zinc-950/60 border border-zinc-800/80 cursor-pointer hover:border-zinc-700">
                   <input
                     type="checkbox"
                     checked={permissoes.canDeleteContent}
                     onChange={() => handleTogglePermission('canDeleteContent')}
-                    className="rounded border-slate-700 text-rose-600 focus:ring-0 h-4 w-4"
+                    className="rounded border-zinc-700 text-rose-600 focus:ring-0 h-4 w-4"
                   />
                   <span className="text-rose-300">Excluir posts e ideias</span>
                 </label>
@@ -462,48 +476,48 @@ export default function MemberModal({
             </div>
 
             {/* Grupo 2: Pipeline Kanban & Publicação */}
-            <div className="space-y-2 pt-2 border-t border-slate-800/60">
-              <h4 className="text-[11px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+            <div className="space-y-2 pt-2 border-t border-zinc-800/60">
+              <h4 className="text-[11px] font-bold uppercase tracking-wider text-zinc-400 flex items-center gap-1.5">
                 <Share2 className="h-3.5 w-3.5 text-purple-400" />
                 Operação & Kanban
               </h4>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-                <label className="flex items-center gap-2.5 p-2 rounded-lg bg-slate-950/60 border border-slate-800/80 cursor-pointer hover:border-slate-700">
+                <label className="flex items-center gap-2.5 p-2 rounded-lg bg-zinc-950/60 border border-zinc-800/80 cursor-pointer hover:border-zinc-700">
                   <input
                     type="checkbox"
                     checked={permissoes.canMoveKanban}
                     onChange={() => handleTogglePermission('canMoveKanban')}
-                    className="rounded border-slate-700 text-indigo-600 focus:ring-0 h-4 w-4"
+                    className="rounded border-zinc-700 text-blue-600 focus:ring-0 h-4 w-4"
                   />
                   <span>Mover cards no pipeline Kanban</span>
                 </label>
 
-                <label className="flex items-center gap-2.5 p-2 rounded-lg bg-slate-950/60 border border-slate-800/80 cursor-pointer hover:border-slate-700">
+                <label className="flex items-center gap-2.5 p-2 rounded-lg bg-zinc-950/60 border border-zinc-800/80 cursor-pointer hover:border-zinc-700">
                   <input
                     type="checkbox"
                     checked={permissoes.canApproveContent}
                     onChange={() => handleTogglePermission('canApproveContent')}
-                    className="rounded border-slate-700 text-indigo-600 focus:ring-0 h-4 w-4"
+                    className="rounded border-zinc-700 text-blue-600 focus:ring-0 h-4 w-4"
                   />
                   <span>Aprovar conteúdos para agendamento</span>
                 </label>
 
-                <label className="flex items-center gap-2.5 p-2 rounded-lg bg-slate-950/60 border border-slate-800/80 cursor-pointer hover:border-slate-700">
+                <label className="flex items-center gap-2.5 p-2 rounded-lg bg-zinc-950/60 border border-zinc-800/80 cursor-pointer hover:border-zinc-700">
                   <input
                     type="checkbox"
                     checked={permissoes.canPublishContent}
                     onChange={() => handleTogglePermission('canPublishContent')}
-                    className="rounded border-slate-700 text-indigo-600 focus:ring-0 h-4 w-4"
+                    className="rounded border-zinc-700 text-blue-600 focus:ring-0 h-4 w-4"
                   />
                   <span>Marcar como postado / publicar</span>
                 </label>
 
-                <label className="flex items-center gap-2.5 p-2 rounded-lg bg-slate-950/60 border border-slate-800/80 cursor-pointer hover:border-slate-700">
+                <label className="flex items-center gap-2.5 p-2 rounded-lg bg-zinc-950/60 border border-zinc-800/80 cursor-pointer hover:border-zinc-700">
                   <input
                     type="checkbox"
                     checked={permissoes.canManageFiles}
                     onChange={() => handleTogglePermission('canManageFiles')}
-                    className="rounded border-slate-700 text-indigo-600 focus:ring-0 h-4 w-4"
+                    className="rounded border-zinc-700 text-blue-600 focus:ring-0 h-4 w-4"
                   />
                   <span>Upload e gestão na Central de Arquivos</span>
                 </label>
@@ -511,40 +525,40 @@ export default function MemberModal({
             </div>
 
             {/* Grupo 3: Métricas, Conexões e Administração */}
-            <div className="space-y-2 pt-2 border-t border-slate-800/60">
-              <h4 className="text-[11px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+            <div className="space-y-2 pt-2 border-t border-zinc-800/60">
+              <h4 className="text-[11px] font-bold uppercase tracking-wider text-zinc-400 flex items-center gap-1.5">
                 <BarChart3 className="h-3.5 w-3.5 text-emerald-400" />
                 Métricas & Administração
               </h4>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-                <label className="flex items-center gap-2.5 p-2 rounded-lg bg-slate-950/60 border border-slate-800/80 cursor-pointer hover:border-slate-700">
+                <label className="flex items-center gap-2.5 p-2 rounded-lg bg-zinc-950/60 border border-zinc-800/80 cursor-pointer hover:border-zinc-700">
                   <input
                     type="checkbox"
                     checked={permissoes.canViewAnalytics}
                     onChange={() => handleTogglePermission('canViewAnalytics')}
-                    className="rounded border-slate-700 text-indigo-600 focus:ring-0 h-4 w-4"
+                    className="rounded border-zinc-700 text-blue-600 focus:ring-0 h-4 w-4"
                   />
-                  <span>Ver métricas do Instagram, GA4 e Google Ads</span>
+                  <span>Ver métricas de performance e relatórios</span>
                 </label>
 
-                <label className="flex items-center gap-2.5 p-2 rounded-lg bg-slate-950/60 border border-slate-800/80 cursor-pointer hover:border-slate-700">
+                <label className="flex items-center gap-2.5 p-2 rounded-lg bg-zinc-950/60 border border-zinc-800/80 cursor-pointer hover:border-zinc-700">
                   <input
                     type="checkbox"
                     checked={permissoes.canManageIntegrations}
                     onChange={() => handleTogglePermission('canManageIntegrations')}
-                    className="rounded border-slate-700 text-indigo-600 focus:ring-0 h-4 w-4"
+                    className="rounded border-zinc-700 text-blue-600 focus:ring-0 h-4 w-4"
                   />
-                  <span>Conectar e editar credenciais de APIs</span>
+                  <span>Configurar inteligência artificial e sistema</span>
                 </label>
 
-                <label className="flex items-center gap-2.5 p-2 rounded-lg bg-slate-950/60 border border-slate-800/80 cursor-pointer hover:border-slate-700 sm:col-span-2">
+                <label className="flex items-center gap-2.5 p-2 rounded-lg bg-zinc-950/60 border border-zinc-800/80 cursor-pointer hover:border-zinc-700 sm:col-span-2">
                   <input
                     type="checkbox"
                     checked={permissoes.canManageTeam}
                     onChange={() => handleTogglePermission('canManageTeam')}
-                    className="rounded border-slate-700 text-indigo-600 focus:ring-0 h-4 w-4"
+                    className="rounded border-zinc-700 text-blue-600 focus:ring-0 h-4 w-4"
                   />
-                  <span className="font-semibold text-indigo-300">
+                  <span className="font-semibold text-zinc-200">
                     Gerenciar equipe (convidar membros e alterar permissões)
                   </span>
                 </label>
@@ -553,11 +567,11 @@ export default function MemberModal({
           </div>
 
           {/* Footer Actions */}
-          <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-800">
+          <div className="flex items-center justify-end gap-3 pt-4 border-t border-zinc-800">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-xs font-semibold text-slate-300 hover:text-white rounded-lg hover:bg-slate-800 transition-colors"
+              className="px-4 py-2 text-xs font-semibold text-zinc-400 hover:text-white rounded-lg hover:bg-zinc-800 transition-colors"
             >
               Cancelar
             </button>
@@ -565,7 +579,7 @@ export default function MemberModal({
             <button
               type="submit"
               disabled={saving}
-              className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-xs font-semibold px-5 py-2.5 rounded-lg shadow-md transition-all active:scale-95"
+              className="flex items-center gap-2 bg-white text-zinc-950 hover:bg-zinc-200 disabled:opacity-50 text-xs font-bold px-5 py-2.5 rounded-lg shadow-md transition-all active:scale-95"
             >
               {saving ? (
                 'Salvando...'

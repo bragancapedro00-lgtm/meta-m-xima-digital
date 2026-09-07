@@ -1202,8 +1202,22 @@ export function ContentProvider({ children }: { children: ReactNode }) {
 
   // Team Members CRUD
   const addTeamMember = async (member: Omit<Perfil, 'id' | 'criado_em'>): Promise<Perfil> => {
+    const cleanEmail = member.email.trim().toLowerCase();
+    const existing = profiles.find((p) => p.email.trim().toLowerCase() === cleanEmail);
+
+    if (existing) {
+      const updated: Perfil = {
+        ...existing,
+        ...member,
+        email: cleanEmail,
+      };
+      setProfiles((prev) => prev.map((p) => (p.id === existing.id ? updated : p)));
+      return updated;
+    }
+
     const newMember: Perfil = {
       ...member,
+      email: cleanEmail,
       id: `p-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
       criado_em: new Date().toISOString(),
       avatar_url: member.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(member.nome)}`,
@@ -1213,7 +1227,7 @@ export function ContentProvider({ children }: { children: ReactNode }) {
 
     setProfiles((prev) => [...prev, newMember]);
 
-    if (isSupabaseLive) {
+    if (isSupabaseLive && supabase) {
       try {
         await supabase.from('perfis').insert({
           nome: newMember.nome,
@@ -1247,7 +1261,7 @@ export function ContentProvider({ children }: { children: ReactNode }) {
       })
     );
 
-    if (isSupabaseLive) {
+    if (isSupabaseLive && supabase) {
       try {
         await supabase.from('perfis').update(updates).eq('id', id);
       } catch (err) {
@@ -1259,7 +1273,7 @@ export function ContentProvider({ children }: { children: ReactNode }) {
   const deleteTeamMember = async (id: string) => {
     setProfiles((prev) => prev.filter((m) => m.id !== id));
 
-    if (isSupabaseLive) {
+    if (isSupabaseLive && supabase) {
       try {
         await supabase.from('perfis').delete().eq('id', id);
       } catch (err) {
@@ -1275,22 +1289,50 @@ export function ContentProvider({ children }: { children: ReactNode }) {
     role: PerfilRole;
     senha?: string;
   }): Promise<{ success: boolean; member: Perfil; inviteUrl: string }> => {
-    const newMember = await addTeamMember({
-      nome: data.nome,
-      email: data.email,
-      cargo: data.cargo,
-      role: data.role,
-      status: 'convidado',
-      senha: data.senha || '123456',
-      permissoes: DEFAULT_ROLE_PERMISSIONS[data.role] || DEFAULT_ROLE_PERMISSIONS.editor,
-    });
+    const cleanEmail = data.email.trim().toLowerCase();
+    const existing = profiles.find((p) => p.email.trim().toLowerCase() === cleanEmail);
+
+    let targetMember: Perfil;
+
+    if (existing) {
+      targetMember = {
+        ...existing,
+        nome: data.nome.trim(),
+        cargo: data.cargo.trim(),
+        role: data.role,
+        status: 'convidado',
+        senha: data.senha?.trim() || existing.senha || '123456',
+        permissoes: DEFAULT_ROLE_PERMISSIONS[data.role] || DEFAULT_ROLE_PERMISSIONS.editor,
+      };
+      setProfiles((prev) => prev.map((p) => (p.id === existing.id ? targetMember : p)));
+
+      if (isSupabaseLive && supabase) {
+        try {
+          await supabase.from('perfis').update(targetMember).eq('id', existing.id);
+        } catch (err) {
+          console.warn('Supabase updateTeamMember error:', err);
+        }
+      }
+    } else {
+      targetMember = await addTeamMember({
+        nome: data.nome.trim(),
+        email: cleanEmail,
+        cargo: data.cargo.trim(),
+        role: data.role,
+        status: 'convidado',
+        senha: data.senha?.trim() || '123456',
+        permissoes: DEFAULT_ROLE_PERMISSIONS[data.role] || DEFAULT_ROLE_PERMISSIONS.editor,
+      });
+    }
 
     const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
-    const inviteUrl = `${baseUrl}/login?email=${encodeURIComponent(data.email)}`;
+    const inviteUrl = `${baseUrl}/login?email=${encodeURIComponent(cleanEmail)}`;
 
-    await addAuditLog('INVITE_MEMBER', 'POST', newMember.id, newMember.nome, `Convite gerado para ${newMember.email} com acesso ${newMember.role}`);
+    try {
+      await addAuditLog('INVITE_MEMBER', 'POST', targetMember.id, targetMember.nome, `Convite gerado para ${targetMember.email} com acesso ${targetMember.role}`);
+    } catch {}
 
-    return { success: true, member: newMember, inviteUrl };
+    return { success: true, member: targetMember, inviteUrl };
   };
 
   // Integrations Management

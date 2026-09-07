@@ -1,18 +1,34 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 
 export const isSupabaseConfigured = (): boolean => {
+  const isPlaceholderUrl =
+    !supabaseUrl ||
+    supabaseUrl.includes('seu-projeto') ||
+    supabaseUrl.includes('mock-instance') ||
+    supabaseUrl.includes('placeholder');
+
+  const isPlaceholderKey =
+    !supabaseAnonKey ||
+    supabaseAnonKey.includes('sua-chave') ||
+    supabaseAnonKey.includes('mock-anon-key') ||
+    supabaseAnonKey.includes('dummy');
+
   return Boolean(
     supabaseUrl &&
     supabaseUrl.startsWith('http') &&
+    !isPlaceholderUrl &&
     supabaseAnonKey &&
-    supabaseAnonKey.length > 20
+    supabaseAnonKey.length > 20 &&
+    !isPlaceholderKey
   );
 };
 
-// Se não houver credenciais reais, inicializamos um cliente nulo ou dummy seguro para evitar erros em runtime
-export const supabase = isSupabaseConfigured()
-  ? createClient(supabaseUrl, supabaseAnonKey)
-  : createClient('https://mock-instance.supabase.co', 'mock-anon-key-0123456789abcdef');
+// Instância do Supabase garantida como SupabaseClient para o TypeScript,
+// enquanto isSupabaseConfigured() controla se chamadas reais são efetuadas.
+export const supabase: SupabaseClient = createClient(
+  isSupabaseConfigured() ? supabaseUrl : 'https://placeholder-instance.supabase.co',
+  isSupabaseConfigured() ? supabaseAnonKey : 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.placeholder'
+);
