@@ -51,6 +51,7 @@ import {
   INITIAL_AUDIT_LOGS,
 } from '@/lib/mockData';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
+import { encodeInviteToken, decodeInviteToken } from '@/lib/inviteToken';
 
 export type PostModalTab = 'detalhes' | 'roteiro' | 'arquivos' | 'publicacao' | 'anuncios' | 'metricas' | 'historico';
 
@@ -139,7 +140,10 @@ interface ContentContextType {
     cargo: string;
     role: PerfilRole;
     senha?: string;
-  }) => Promise<{ success: boolean; member: Perfil; inviteUrl: string }>;
+    customBaseUrl?: string;
+  }) => Promise<{ success: boolean; member: Perfil; inviteUrl: string; inviteToken: string }>;
+  registerInvitedMember: (memberData: Partial<Perfil>) => Promise<Perfil>;
+  syncServerProfiles: () => Promise<void>;
   linkPostToAd: (postId: string, adId: string, campaignId?: string) => Promise<void>;
 
   // AI Assistant Integrations
@@ -295,6 +299,31 @@ export function ContentProvider({ children }: { children: ReactNode }) {
     } catch {
       // ignore localStorage parse error
     }
+
+    // Sincroniza colaboradores cadastrados no servidor para acesso entre dispositivos
+    fetch('/api/team/members', { cache: 'no-store' })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success && Array.isArray(data.members)) {
+          setProfiles((current) => {
+            const map = new Map<string, Perfil>();
+            for (const p of current) {
+              map.set(p.email.toLowerCase(), p);
+            }
+            for (const s of data.members) {
+              map.set(s.email.toLowerCase(), s);
+            }
+            const merged = Array.from(map.values());
+            try {
+              localStorage.setItem(LOCAL_STORAGE_KEY_PROFILES, JSON.stringify(merged));
+            } catch {}
+            return merged;
+          });
+        }
+      })
+      .catch((err) => {
+        console.warn('Aviso: endpoint /api/team/members não respondeu na inicialização:', err);
+      });
   }, []);
 
   // Save to localStorage when state changes
@@ -1200,58 +1229,98 @@ export function ContentProvider({ children }: { children: ReactNode }) {
     return !!currentUser.permissoes?.[action];
   };
 
-  // Team Members CRUD
+  // Sincronização explícita de membros com o servidor
+  const syncServerProfiles = async () => {
+    try {
+      const res = await fetch('/api/team/members', { cache: 'no-store' });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && Array.isArray(data.members)) {
+          setProfiles((current) => {
+            const map = new Map<string, Perfil>();
+            for (const p of current) {
+              map.set(p.email.toLowerCase(), p);
+            }
+            for (const s of data.members) {
+              map.set(s.email.toLowerCase(), s);
+            }
+            const merged = Array.from(map.values());
+            try {
+              localStorage.setItem(LOCAL_STORAGE_KEY_PROFILES, JSON.stringify(merged));
+            } catch {}
+            return merged;
+          });
+        }
+      }
+    } catch {}
+  };
+
+  // Team Members CRUD com persistência compartilhada server-side
   const addTeamMember = async (member: Omit<Perfil, 'id' | 'criado_em'>): Promise<Perfil> => {
     const cleanEmail = member.email.trim().toLowerCase();
     const existing = profiles.find((p) => p.email.trim().toLowerCase() === cleanEmail);
 
+    let finalMember: Perfil;
+
     if (existing) {
-      const updated: Perfil = {
+      finalMember = {
         ...existing,
         ...member,
         email: cleanEmail,
       };
-      setProfiles((prev) => prev.map((p) => (p.id === existing.id ? updated : p)));
-      return updated;
+      setProfiles((prev) => prev.map((p) => (p.id === existing.id ? finalMember : p)));
+    } else {
+      finalMember = {
+        ...member,
+        email: cleanEmail,
+        id: `p-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+        criado_em: new Date().toISOString(),
+        avatar_url: member.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(member.nome)}`,
+        permissoes: member.permissoes || DEFAULT_ROLE_PERMISSIONS[member.role] || DEFAULT_ROLE_PERMISSIONS.editor,
+        senha: member.senha || '123456',
+        status: member.status || 'ativo',
+      };
+      setProfiles((prev) => [...prev, finalMember]);
     }
 
-    const newMember: Perfil = {
-      ...member,
-      email: cleanEmail,
-      id: `p-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
-      criado_em: new Date().toISOString(),
-      avatar_url: member.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(member.nome)}`,
-      permissoes: member.permissoes || DEFAULT_ROLE_PERMISSIONS[member.role] || DEFAULT_ROLE_PERMISSIONS.editor,
-      senha: member.senha || '123456',
-    };
-
-    setProfiles((prev) => [...prev, newMember]);
+    // Persiste no servidor para acesso imediato a partir de outros dispositivos
+    try {
+      await fetch('/api/team/members', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ member: finalMember }),
+      });
+    } catch (err) {
+      console.warn('Aviso ao sincronizar novo membro no servidor:', err);
+    }
 
     if (isSupabaseLive && supabase) {
       try {
         await supabase.from('perfis').insert({
-          nome: newMember.nome,
-          email: newMember.email,
-          avatar_url: newMember.avatar_url,
-          cargo: newMember.cargo,
-          role: newMember.role,
-          status: newMember.status,
-          permissoes: newMember.permissoes,
-          senha: newMember.senha,
+          nome: finalMember.nome,
+          email: finalMember.email,
+          avatar_url: finalMember.avatar_url,
+          cargo: finalMember.cargo,
+          role: finalMember.role,
+          status: finalMember.status,
+          permissoes: finalMember.permissoes,
+          senha: finalMember.senha,
         });
       } catch (err) {
         console.warn('Supabase addTeamMember error:', err);
       }
     }
 
-    return newMember;
+    return finalMember;
   };
 
   const updateTeamMember = async (id: string, updates: Partial<Perfil>) => {
+    let targetUpdated: Perfil | undefined;
     setProfiles((prev) =>
       prev.map((m) => {
         if (m.id === id) {
           const updated = { ...m, ...updates };
+          targetUpdated = updated;
           if (currentUser.id === id) {
             setCurrentUser(updated);
           }
@@ -1260,6 +1329,16 @@ export function ContentProvider({ children }: { children: ReactNode }) {
         return m;
       })
     );
+
+    if (targetUpdated) {
+      try {
+        await fetch('/api/team/members', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ member: targetUpdated }),
+        });
+      } catch {}
+    }
 
     if (isSupabaseLive && supabase) {
       try {
@@ -1272,6 +1351,12 @@ export function ContentProvider({ children }: { children: ReactNode }) {
 
   const deleteTeamMember = async (id: string) => {
     setProfiles((prev) => prev.filter((m) => m.id !== id));
+
+    try {
+      await fetch(`/api/team/members?id=${encodeURIComponent(id)}`, {
+        method: 'DELETE',
+      });
+    } catch {}
 
     if (isSupabaseLive && supabase) {
       try {
@@ -1288,7 +1373,8 @@ export function ContentProvider({ children }: { children: ReactNode }) {
     cargo: string;
     role: PerfilRole;
     senha?: string;
-  }): Promise<{ success: boolean; member: Perfil; inviteUrl: string }> => {
+    customBaseUrl?: string;
+  }): Promise<{ success: boolean; member: Perfil; inviteUrl: string; inviteToken: string }> => {
     const cleanEmail = data.email.trim().toLowerCase();
     const existing = profiles.find((p) => p.email.trim().toLowerCase() === cleanEmail);
 
@@ -1305,6 +1391,14 @@ export function ContentProvider({ children }: { children: ReactNode }) {
         permissoes: DEFAULT_ROLE_PERMISSIONS[data.role] || DEFAULT_ROLE_PERMISSIONS.editor,
       };
       setProfiles((prev) => prev.map((p) => (p.id === existing.id ? targetMember : p)));
+
+      try {
+        await fetch('/api/team/members', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ member: targetMember }),
+        });
+      } catch {}
 
       if (isSupabaseLive && supabase) {
         try {
@@ -1325,14 +1419,71 @@ export function ContentProvider({ children }: { children: ReactNode }) {
       });
     }
 
-    const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
-    const inviteUrl = `${baseUrl}/login?email=${encodeURIComponent(cleanEmail)}`;
+    // Token universal de convite contendo os dados do membro (funciona em qualquer dispositivo)
+    const inviteToken = encodeInviteToken(targetMember);
+
+    const baseUrl =
+      data.customBaseUrl?.trim() ||
+      (typeof window !== 'undefined' ? window.location.origin : '');
+
+    const inviteUrl = `${baseUrl}/login?invite=${inviteToken}&email=${encodeURIComponent(cleanEmail)}`;
 
     try {
       await addAuditLog('INVITE_MEMBER', 'POST', targetMember.id, targetMember.nome, `Convite gerado para ${targetMember.email} com acesso ${targetMember.role}`);
     } catch {}
 
-    return { success: true, member: targetMember, inviteUrl };
+    return { success: true, member: targetMember, inviteUrl, inviteToken };
+  };
+
+  const registerInvitedMember = async (memberData: Partial<Perfil>): Promise<Perfil> => {
+    const cleanEmail = (memberData.email || '').trim().toLowerCase();
+    const existing = profiles.find((p) => p.email.trim().toLowerCase() === cleanEmail);
+
+    if (existing) {
+      const updated: Perfil = {
+        ...existing,
+        ...memberData,
+        email: cleanEmail,
+        status: 'ativo',
+      };
+      setProfiles((prev) => prev.map((p) => (p.id === existing.id ? updated : p)));
+      try {
+        await fetch('/api/team/members', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ member: updated }),
+        });
+      } catch {}
+      return updated;
+    }
+
+    const newMember: Perfil = {
+      id: memberData.id || `p-${Date.now()}`,
+      nome: memberData.nome || 'Colaborador',
+      email: cleanEmail,
+      cargo: memberData.cargo || 'Membro da Equipe',
+      role: memberData.role || 'social_media',
+      status: 'ativo',
+      senha: memberData.senha || '123456',
+      permissoes:
+        memberData.permissoes ||
+        DEFAULT_ROLE_PERMISSIONS[memberData.role || 'social_media'] ||
+        DEFAULT_ROLE_PERMISSIONS.editor,
+      avatar_url:
+        memberData.avatar_url ||
+        `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(memberData.nome || 'Colaborador')}`,
+      criado_em: new Date().toISOString(),
+    };
+
+    setProfiles((prev) => [...prev, newMember]);
+    try {
+      await fetch('/api/team/members', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ member: newMember }),
+      });
+    } catch {}
+    return newMember;
   };
 
   // Integrations Management
@@ -1425,18 +1576,49 @@ export function ContentProvider({ children }: { children: ReactNode }) {
     return { success: true, message: `Métricas sincronizadas em tempo real com sucesso (${new Date(now).toLocaleTimeString('pt-BR')})!` };
   };
 
-  // Authentication & Session
+  // Authentication & Session com suporte a sincronização entre múltiplos dispositivos
   const loginWithEmail = async (
     email: string,
     senha?: string
   ): Promise<{ success: boolean; error?: string; user?: Perfil }> => {
     const cleanEmail = email.trim().toLowerCase();
-    const member = profiles.find((p) => p.email.toLowerCase() === cleanEmail);
+    let member = profiles.find((p) => p.email.toLowerCase() === cleanEmail);
+
+    // Se o colaborador não foi encontrado no cache local deste dispositivo,
+    // busca imediatamente no servidor compartilhado para evitar falsos erros de cadastro
+    if (!member) {
+      try {
+        const res = await fetch('/api/team/members', { cache: 'no-store' });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success && Array.isArray(data.members)) {
+            const found = data.members.find(
+              (m: Perfil) => m.email.toLowerCase() === cleanEmail
+            );
+            if (found) {
+              member = found;
+              setProfiles((prev) => {
+                const map = new Map<string, Perfil>();
+                for (const p of prev) map.set(p.email.toLowerCase(), p);
+                for (const s of data.members) map.set(s.email.toLowerCase(), s);
+                const merged = Array.from(map.values());
+                try {
+                  localStorage.setItem(LOCAL_STORAGE_KEY_PROFILES, JSON.stringify(merged));
+                } catch {}
+                return merged;
+              });
+            }
+          }
+        }
+      } catch (err) {
+        console.warn('Aviso: erro ao sincronizar servidor durante login:', err);
+      }
+    }
 
     if (!member) {
       return {
         success: false,
-        error: 'E-mail não cadastrado na equipe. Solicite ao administrador da agência para cadastrar seu acesso.',
+        error: 'E-mail não cadastrado na equipe. Verifique o link de convite recebido ou solicite o cadastro ao administrador.',
       };
     }
 
@@ -1616,6 +1798,8 @@ export function ContentProvider({ children }: { children: ReactNode }) {
         updateTeamMember,
         deleteTeamMember,
         inviteTeamMember,
+        registerInvitedMember,
+        syncServerProfiles,
         integrations,
         updateIntegration,
         testIntegrationConnection,

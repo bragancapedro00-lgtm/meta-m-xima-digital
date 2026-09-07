@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useContent } from '@/lib/context/ContentContext';
 import { Perfil } from '@/types';
+import { decodeInviteToken } from '@/lib/inviteToken';
 import {
   Mail,
   Lock,
@@ -22,7 +23,7 @@ import {
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { profiles, loginWithEmail, currentUser } = useContent();
+  const { profiles, loginWithEmail, registerInvitedMember } = useContent();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -31,15 +32,28 @@ function LoginForm() {
   const [errorMsg, setErrorMsg] = useState('');
   const [successUser, setSuccessUser] = useState<Perfil | null>(null);
   const [selectedMemberName, setSelectedMemberName] = useState<string | null>(null);
+  const [invitePayload, setInvitePayload] = useState<Partial<Perfil> | null>(null);
   const passwordInputRef = useRef<HTMLInputElement>(null);
 
-  // Pre-fill email from query parameters (e.g., /login?email=pedro@metamaxima.com.br)
+  // Pre-fill email or decode self-contained invite token from URL
   useEffect(() => {
+    const inviteParam = searchParams.get('invite') || searchParams.get('token');
     const emailParam = searchParams.get('email');
-    if (emailParam) {
+
+    if (inviteParam) {
+      const decoded = decodeInviteToken(inviteParam);
+      if (decoded && decoded.email) {
+        setInvitePayload(decoded);
+        setEmail(decoded.email);
+        setPassword(decoded.senha || '123456');
+
+        // Garante o registro imediato do colaborador no contexto e servidor deste dispositivo
+        registerInvitedMember(decoded).catch(() => {});
+      }
+    } else if (emailParam) {
       setEmail(emailParam);
     }
-  }, [searchParams]);
+  }, [searchParams, registerInvitedMember]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -124,6 +138,25 @@ function LoginForm() {
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Invite Token Welcoming Alert */}
+            {invitePayload && (
+              <div className="p-4 rounded-xl bg-blue-950/40 border border-blue-800/60 text-blue-200 text-xs space-y-2.5 text-center animate-fade-in">
+                <div className="flex items-center justify-center gap-2 font-bold text-white text-sm">
+                  <Sparkles className="h-4 w-4 text-blue-400" />
+                  <span>Convite Identificado: Olá, {invitePayload.nome}!</span>
+                </div>
+                <p className="text-[11px] text-zinc-300">
+                  Seu acesso à agência foi liberado como <strong className="text-white">{invitePayload.cargo}</strong> ({invitePayload.role?.toUpperCase()}).
+                </p>
+                <div className="p-2.5 rounded-lg bg-zinc-950 border border-zinc-800 text-[11px] text-zinc-300 flex items-center justify-between">
+                  <span>Senha inicial: <strong className="text-white font-mono">{invitePayload.senha || '123456'}</strong></span>
+                  <span className="text-[10px] text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded font-semibold">
+                    Acesso Liberado
+                  </span>
+                </div>
+              </div>
+            )}
+
             {/* Error Message */}
             {errorMsg && (
               <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs flex items-start gap-2.5 animate-shake">
@@ -174,7 +207,9 @@ function LoginForm() {
                 </button>
               </div>
               <span className="text-[11px] text-zinc-500 mt-1 block">
-                Senha definida pelo administrador no cadastro do seu perfil.
+                {invitePayload
+                  ? 'Senha inicial pronta para o seu primeiro acesso. Você poderá alterá-la a qualquer momento.'
+                  : 'Senha definida pelo administrador no cadastro do seu perfil.'}
               </span>
             </div>
 
@@ -188,7 +223,11 @@ function LoginForm() {
                 'Autenticando...'
               ) : (
                 <>
-                  <span>Acessar Meu Painel</span>
+                  <span>
+                    {invitePayload
+                      ? `Entrar como ${invitePayload.nome?.split(' ')[0]}`
+                      : 'Acessar Meu Painel'}
+                  </span>
                   <ArrowRight className="h-4 w-4" />
                 </>
               )}

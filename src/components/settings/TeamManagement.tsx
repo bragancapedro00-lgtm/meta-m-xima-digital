@@ -55,10 +55,27 @@ export default function TeamManagement() {
   const [inviteRole, setInviteRole] = useState<PerfilRole>('editor');
   const [inviteSenha, setInviteSenha] = useState('123456');
   const [inviteError, setInviteError] = useState('');
-  const [generatedInvite, setGeneratedInvite] = useState<{ member: Perfil; inviteUrl: string } | null>(null);
+  const [generatedInvite, setGeneratedInvite] = useState<{ member: Perfil; inviteUrl: string; inviteToken?: string } | null>(null);
   const [copiedUniversalLink, setCopiedUniversalLink] = useState(false);
   const [copiedInviteText, setCopiedInviteText] = useState(false);
+  const [copiedInviteUrl, setCopiedInviteUrl] = useState(false);
   const [isInviting, setIsInviting] = useState(false);
+  const [networkInfo, setNetworkInfo] = useState<{
+    currentOrigin: string;
+    networkOrigin: string;
+    isLocalhost: boolean;
+    primaryIp: string;
+  } | null>(null);
+  const [useNetworkAddress, setUseNetworkAddress] = useState(true);
+
+  React.useEffect(() => {
+    fetch('/api/team/network-info')
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.success) setNetworkInfo(d);
+      })
+      .catch(() => {});
+  }, []);
 
   const handleConfirmSwitch = (target: Perfil) => {
     setCurrentUser(target);
@@ -503,12 +520,17 @@ export default function TeamManagement() {
                   setIsInviting(true);
                   setInviteError('');
                   try {
+                    const effectiveBaseUrl = (useNetworkAddress && networkInfo?.isLocalhost && networkInfo.networkOrigin)
+                      ? networkInfo.networkOrigin
+                      : (typeof window !== 'undefined' ? window.location.origin : '');
+
                     const res = await inviteTeamMember({
                       nome: inviteNome.trim(),
                       email: inviteEmail.trim(),
                       cargo: inviteCargo.trim() || 'Colaborador',
                       role: inviteRole,
                       senha: inviteSenha.trim() || '123456',
+                      customBaseUrl: effectiveBaseUrl,
                     });
                     setGeneratedInvite(res);
                   } catch (err: any) {
@@ -519,9 +541,22 @@ export default function TeamManagement() {
                 }}
                 className="space-y-3.5 border-t border-zinc-800 pt-4"
               >
-                <h4 className="text-xs font-bold text-zinc-200 uppercase tracking-wider">
-                  Enviar Convite Personalizado
-                </h4>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <h4 className="text-xs font-bold text-zinc-200 uppercase tracking-wider">
+                    Enviar Convite Personalizado
+                  </h4>
+                  {networkInfo?.isLocalhost && (
+                    <label className="flex items-center gap-2 text-[11px] text-zinc-400 cursor-pointer bg-zinc-900 border border-zinc-800 px-2.5 py-1 rounded-lg">
+                      <input
+                        type="checkbox"
+                        checked={useNetworkAddress}
+                        onChange={(e) => setUseNetworkAddress(e.target.checked)}
+                        className="rounded border-zinc-700 text-blue-600 focus:ring-0 h-3.5 w-3.5"
+                      />
+                      <span>Gerar link para outro dispositivo ({networkInfo.primaryIp})</span>
+                    </label>
+                  )}
+                </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
@@ -614,9 +649,42 @@ export default function TeamManagement() {
                   <span>Convite gerado com sucesso para <strong>{generatedInvite.member.nome}</strong>!</span>
                 </div>
 
+                {/* Direct Link Copier */}
+                <div className="p-3 rounded-xl bg-zinc-900 border border-zinc-800 space-y-1.5">
+                  <div className="flex items-center justify-between text-[11px]">
+                    <span className="font-semibold text-zinc-300 flex items-center gap-1.5">
+                      <LinkIcon className="h-3.5 w-3.5 text-blue-400" />
+                      Link de Convite Universal (Acesso em qualquer aparelho)
+                    </span>
+                    <span className="text-[10px] text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20 font-mono">
+                      Multi-dispositivo
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      readOnly
+                      value={generatedInvite.inviteUrl}
+                      className="flex-1 bg-zinc-950 border border-zinc-700 rounded-lg px-3 py-2 text-xs font-mono text-zinc-200 select-all focus:outline-none"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        navigator.clipboard.writeText(generatedInvite.inviteUrl);
+                        setCopiedInviteUrl(true);
+                        setTimeout(() => setCopiedInviteUrl(false), 2000);
+                      }}
+                      className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-white text-xs font-semibold shrink-0 border border-zinc-700"
+                    >
+                      {copiedInviteUrl ? <Check className="h-3.5 w-3.5 text-emerald-400" /> : <Copy className="h-3.5 w-3.5" />}
+                      {copiedInviteUrl ? 'Copiado!' : 'Copiar Link'}
+                    </button>
+                  </div>
+                </div>
+
                 <div className="p-3.5 rounded-xl bg-zinc-950 border border-zinc-800 space-y-2">
                   <span className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider block">
-                    Mensagem de Convite Pronta:
+                    Mensagem Completa Pronta para Envio:
                   </span>
                   <pre className="text-xs font-mono text-zinc-200 whitespace-pre-wrap bg-zinc-900 p-3 rounded border border-zinc-800 leading-relaxed">
 {`🚀 Convite para a Plataforma Meta Máxima

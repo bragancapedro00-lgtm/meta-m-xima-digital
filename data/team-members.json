@@ -1,0 +1,94 @@
+[
+  {
+    "id": "p-1",
+    "nome": "Lucas Silva",
+    "email": "lucas@metamaxima.com.br",
+    "avatar_url": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80",
+    "cargo": "Head de Conteúdo & Estratégia",
+    "role": "gestor",
+    "status": "ativo",
+    "permissoes": {
+      "canCreateContent": true,
+      "canEditContent": true,
+      "canDeleteContent": true,
+      "canMoveKanban": true,
+      "canApproveContent": true,
+      "canPublishContent": true,
+      "canManageFiles": true,
+      "canViewMarketing": true,
+      "canViewAnalytics": true,
+      "canManageIntegrations": true,
+      "canManageTeam": false
+    },
+    "senha": "123456"
+  },
+  {
+    "id": "p-2",
+    "nome": "Mariana Costa",
+    "email": "mariana@metamaxima.com.br",
+    "avatar_url": "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80",
+    "cargo": "Copywriter & Roteirista",
+    "role": "social_media",
+    "status": "ativo",
+    "permissoes": {
+      "canCreateContent": true,
+      "canEditContent": true,
+      "canDeleteContent": false,
+      "canMoveKanban": true,
+      "canApproveContent": true,
+      "canPublishContent": true,
+      "canManageFiles": true,
+      "canViewMarketing": true,
+      "canViewAnalytics": true,
+      "canManageIntegrations": false,
+      "canManageTeam": false
+    },
+    "senha": "123456"
+  },
+  {
+    "id": "p-3",
+    "nome": "Pedro Santos",
+    "email": "pedro@metamaxima.com.br",
+    "avatar_url": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80",
+    "cargo": "Editor de Vídeo & Motion",
+    "role": "editor",
+    "status": "ativo",
+    "permissoes": {
+      "canCreateContent": true,
+      "canEditContent": true,
+      "canDeleteContent": false,
+      "canMoveKanban": true,
+      "canApproveContent": false,
+      "canPublishContent": false,
+      "canManageFiles": true,
+      "canViewMarketing": false,
+      "canViewAnalytics": true,
+      "canManageIntegrations": false,
+      "canManageTeam": false
+    },
+    "senha": "123456"
+  },
+  {
+    "id": "p-4",
+    "nome": "Camila Rocha",
+    "email": "camila@metamaxima.com.br",
+    "avatar_url": "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=150&auto=format&fit=crop&q=80",
+    "cargo": "Diretora de Operações",
+    "role": "admin",
+    "status": "ativo",
+    "permissoes": {
+      "canCreateContent": true,
+      "canEditContent": true,
+      "canDeleteContent": true,
+      "canMoveKanban": true,
+      "canApproveContent": true,
+      "canPublishContent": true,
+      "canManageFiles": true,
+      "canViewMarketing": true,
+      "canViewAnalytics": true,
+      "canManageIntegrations": true,
+      "canManageTeam": true
+    },
+    "senha": "123456"
+  }
+]
