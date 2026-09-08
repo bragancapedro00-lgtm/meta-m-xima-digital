@@ -6,6 +6,7 @@ import {
   getSupabaseAnonKey,
   isSupabaseConfigured,
   testSupabaseConnection,
+  normalizeSupabaseUrl,
 } from '@/lib/supabase';
 import { syncAllMembersToSupabase, getStoredTeamMembers } from '@/lib/teamStore';
 
@@ -89,7 +90,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const cleanUrl = url.trim().replace(/\/+$/, '');
+    const cleanUrl = normalizeSupabaseUrl(url);
     const cleanKey = anonKey.trim();
 
     // 1. Testa a conexao real antes de persistir
@@ -105,8 +106,10 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const effectiveUrl = testResult.normalizedUrl || cleanUrl;
+
     // 2. Atualiza variaveis em memoria no servidor imediatamente
-    process.env.NEXT_PUBLIC_SUPABASE_URL = cleanUrl;
+    process.env.NEXT_PUBLIC_SUPABASE_URL = effectiveUrl;
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = cleanKey;
 
     // 3. Persiste no arquivo .env.local preservando outras configuracoes
@@ -122,10 +125,10 @@ export async function POST(req: NextRequest) {
     if (updatedEnv.includes('NEXT_PUBLIC_SUPABASE_URL=')) {
       updatedEnv = updatedEnv.replace(
         /NEXT_PUBLIC_SUPABASE_URL=.*/,
-        `NEXT_PUBLIC_SUPABASE_URL=${cleanUrl}`
+        `NEXT_PUBLIC_SUPABASE_URL=${effectiveUrl}`
       );
     } else {
-      updatedEnv += `\nNEXT_PUBLIC_SUPABASE_URL=${cleanUrl}`;
+      updatedEnv += `\nNEXT_PUBLIC_SUPABASE_URL=${effectiveUrl}`;
     }
 
     if (updatedEnv.includes('NEXT_PUBLIC_SUPABASE_ANON_KEY=')) {
@@ -139,7 +142,7 @@ export async function POST(req: NextRequest) {
 
     await fs.writeFile(ENV_LOCAL_PATH, updatedEnv.trim() + '\n', 'utf-8');
 
-    // 4. Sincroniza automaticamente todos os perfis locais para a tabela perfis do Supabase
+    // 4. Se a tabela já existir, sincroniza os perfis imediatamente
     let syncedCount = 0;
     if (testResult.hasPerfisTable) {
       const syncRes = await syncAllMembersToSupabase();
@@ -148,9 +151,10 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       success: true,
+      url: effectiveUrl,
       message: testResult.hasPerfisTable
         ? `✅ Conectado com sucesso! ${syncedCount} colaborador(es) sincronizados no Supabase.`
-        : '⚠️ Conectado ao Supabase! A tabela "perfis" precisa ser criada no SQL Editor.',
+        : '🟢 Conectado à instância do Supabase com sucesso! Apenas execute o script da tabela "perfis" no SQL Editor para ativar a sincronização dos membros.',
       hasPerfisTable: testResult.hasPerfisTable,
       syncedCount,
     });

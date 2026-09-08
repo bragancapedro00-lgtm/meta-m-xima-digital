@@ -149,14 +149,16 @@ export default function SettingsView() {
 
       const data = await res.json();
       if (res.ok && data.success) {
+        const finalUrl = data.url || supabaseUrl.trim();
+        setSupabaseUrl(finalUrl);
         // Salva tambem no localStorage para acesso imediato no cliente
         try {
-          localStorage.setItem('mmd_supabase_url', supabaseUrl.trim());
+          localStorage.setItem('mmd_supabase_url', finalUrl);
           localStorage.setItem('mmd_supabase_anon_key', supabaseKey.trim());
         } catch {}
 
         setFeedback({
-          type: 'success',
+          type: data.hasPerfisTable ? 'success' : 'info',
           message: data.message || 'Supabase conectado e sincronizado com sucesso!',
         });
         await fetchSupabaseStatus();
@@ -425,11 +427,15 @@ export default function SettingsView() {
                 className={`p-4 rounded-xl border text-xs flex items-start gap-3 transition-all ${
                   feedback.type === 'success'
                     ? 'bg-emerald-950/40 border-emerald-800/60 text-emerald-300'
+                    : feedback.type === 'info'
+                    ? 'bg-amber-950/40 border-amber-800/60 text-amber-300'
                     : 'bg-rose-950/40 border-rose-800/60 text-rose-300'
                 }`}
               >
                 {feedback.type === 'success' ? (
                   <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0 mt-0.5" />
+                ) : feedback.type === 'info' ? (
+                  <CheckCircle2 className="h-4 w-4 text-amber-400 shrink-0 mt-0.5" />
                 ) : (
                   <AlertCircle className="h-4 w-4 text-rose-400 shrink-0 mt-0.5" />
                 )}
