@@ -164,7 +164,7 @@ export async function saveStoredTeamMember(member: Perfil): Promise<Perfil> {
   const finalMember: Perfil = {
     ...member,
     email: cleanEmail,
-    id: member.id || crypto.randomUUID(),
+    id: UUID_REGEX.test(member.id || '') ? member.id : crypto.randomUUID(),
     permissoes:
       member.permissoes ||
       DEFAULT_ROLE_PERMISSIONS[member.role] ||
@@ -273,7 +273,7 @@ export function parseInviteToken(token: string): Partial<Perfil> | null {
     }
 
     return {
-      id: parsed.id || `p-${Date.now()}`,
+      id: UUID_REGEX.test(parsed.id || '') ? parsed.id : crypto.randomUUID(),
       nome: parsed.nome,
       email: parsed.email.toLowerCase(),
       cargo: parsed.cargo || 'Colaborador',

@@ -36,6 +36,8 @@ function LoginForm() {
   const passwordInputRef = useRef<HTMLInputElement>(null);
   const redirectTimerRef = useRef<NodeJS.Timeout | null>(null);
 
+  const registeredTokenRef = useRef<string | null>(null);
+
   // Previne memory leaks limpando qualquer temporizador ativo ao desmontar o componente
   useEffect(() => {
     return () => {
@@ -45,25 +47,48 @@ function LoginForm() {
     };
   }, []);
 
-  // Pre-fill email or decode self-contained invite token from URL
+  // Pre-fill email or decode self-contained invite token from URL (apenas uma vez por token único)
   useEffect(() => {
     const inviteParam = searchParams.get('invite') || searchParams.get('token');
     const emailParam = searchParams.get('email');
 
-    if (inviteParam) {
+    if (inviteParam && inviteParam !== registeredTokenRef.current) {
+      registeredTokenRef.current = inviteParam;
       const decoded = decodeInviteToken(inviteParam);
       if (decoded && decoded.email) {
         setInvitePayload(decoded);
         setEmail(decoded.email);
         setPassword(decoded.senha || '123456');
 
-        // Garante o registro imediato do colaborador no contexto e servidor deste dispositivo
+        // Garante o registro imediato do colaborador no contexto deste dispositivo
         registerInvitedMember(decoded).catch(() => {});
       }
-    } else if (emailParam) {
+    } else if (emailParam && !inviteParam) {
       setEmail(emailParam);
     }
-  }, [searchParams, registerInvitedMember]);
+  }, [searchParams]);
+
+  const handleInstantInviteAccess = async () => {
+    const inviteToken = searchParams.get('invite') || searchParams.get('token');
+    if (!inviteToken) return;
+    setLoading(true);
+    setErrorMsg('');
+    try {
+      const res = await loginWithInviteToken(inviteToken);
+      if (res.success && res.user) {
+        setSuccessUser(res.user);
+        redirectTimerRef.current = setTimeout(() => {
+          router.push('/kanban');
+        }, 800);
+      } else {
+        setErrorMsg(res.error || 'Não foi possível autenticar.');
+        setLoading(false);
+      }
+    } catch {
+      setErrorMsg('Erro inesperado ao realizar login.');
+      setLoading(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -100,7 +125,7 @@ function LoginForm() {
         setSuccessUser(res.user);
         redirectTimerRef.current = setTimeout(() => {
           router.push('/kanban');
-        }, 1000);
+        }, 800);
       }
     } catch (err: any) {
       setErrorMsg('Erro inesperado ao realizar login.');
@@ -176,6 +201,16 @@ function LoginForm() {
                     Acesso Liberado
                   </span>
                 </div>
+                <button
+                  type="button"
+                  onClick={handleInstantInviteAccess}
+                  disabled={loading}
+                  className="w-full mt-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-md transition-all active:scale-95 disabled:opacity-50"
+                >
+                  <Sparkles className="h-3.5 w-3.5" />
+                  <span>Acessar Painel Instantaneamente</span>
+                  <ArrowRight className="h-3.5 w-3.5" />
+                </button>
               </div>
             )}
 

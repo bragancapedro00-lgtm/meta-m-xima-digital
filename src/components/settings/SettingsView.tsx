@@ -108,7 +108,7 @@ export default function SettingsView() {
         const data = await res.json();
         if (isMountedRef.current && data.success) {
           setStatusData(data);
-          if (data.url && !supabaseUrl) {
+          if (data.url) {
             setSupabaseUrl(data.url);
           }
         }
@@ -118,7 +118,7 @@ export default function SettingsView() {
     } finally {
       if (isMountedRef.current) setLoadingStatus(false);
     }
-  }, [supabaseUrl]);
+  }, []);
 
   React.useEffect(() => {
     fetchSupabaseStatus();
@@ -126,7 +126,7 @@ export default function SettingsView() {
 
   const handleSaveEnv = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!supabaseUrl.trim() || !supabaseKey.trim()) {
+    if (!supabaseUrl.trim() || (!supabaseKey.trim() && !statusData?.isConfigured)) {
       setFeedback({
         type: 'error',
         message: 'Preencha a URL e a Anon Key do Supabase antes de conectar.',
@@ -154,7 +154,9 @@ export default function SettingsView() {
         // Salva tambem no localStorage para acesso imediato no cliente
         try {
           localStorage.setItem('mmd_supabase_url', finalUrl);
-          localStorage.setItem('mmd_supabase_anon_key', supabaseKey.trim());
+          if (supabaseKey.trim()) {
+            localStorage.setItem('mmd_supabase_anon_key', supabaseKey.trim());
+          }
         } catch {}
 
         setFeedback({

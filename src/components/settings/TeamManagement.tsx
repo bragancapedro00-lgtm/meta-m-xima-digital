@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { useContent } from '@/lib/context/ContentContext';
 import { Perfil, StatusMembro, PerfilRole } from '@/types';
+import { encodeInviteToken } from '@/lib/inviteToken';
 import MemberModal from './MemberModal';
 import SwitchProfileModal from '@/components/auth/SwitchProfileModal';
 import {
@@ -103,13 +104,17 @@ export default function TeamManagement() {
     } catch {}
   };
 
-  const handleCopyAccessLink = (email: string, id: string) => {
-    const origin = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000';
-    const link = `${origin}/login?email=${encodeURIComponent(email)}`;
+  const handleCopyAccessLink = (member: Perfil) => {
+    const token = encodeInviteToken(member);
+    let effectiveOrigin = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000';
+    if (networkInfo?.networkOrigin && (effectiveOrigin.includes('localhost') || effectiveOrigin.includes('127.0.0.1'))) {
+      effectiveOrigin = networkInfo.networkOrigin;
+    }
+    const link = `${effectiveOrigin}/login?invite=${token}&email=${encodeURIComponent(member.email)}`;
     navigator.clipboard.writeText(link);
-    setCopiedMap((prev) => ({ ...prev, [id]: true }));
+    setCopiedMap((prev) => ({ ...prev, [member.id]: true }));
     registerTimeout(() => {
-      setCopiedMap((prev) => ({ ...prev, [id]: false }));
+      setCopiedMap((prev) => ({ ...prev, [member.id]: false }));
     }, 3000);
   };
 
@@ -395,7 +400,7 @@ export default function TeamManagement() {
 
                   <button
                     type="button"
-                    onClick={() => handleCopyAccessLink(member.email, member.id)}
+                    onClick={() => handleCopyAccessLink(member)}
                     title="Copiar link de acesso para enviar ao colaborador"
                     className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg transition-all min-h-[44px] ${
                       copiedMap[member.id]

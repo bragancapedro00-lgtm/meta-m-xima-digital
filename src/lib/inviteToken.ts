@@ -1,9 +1,23 @@
 import { Perfil, DEFAULT_ROLE_PERMISSIONS } from '@/types';
 
+export function ensureValidUuid(id?: string): string {
+  if (id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
+    return id;
+  }
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === 'x' ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+}
+
 // Codifica os dados do colaborador em um token URL-safe que funciona em qualquer navegador/dispositivo
 export function encodeInviteToken(member: Partial<Perfil>): string {
   const payload = {
-    id: member.id,
+    id: ensureValidUuid(member.id),
     nome: member.nome,
     email: member.email?.trim().toLowerCase(),
     cargo: member.cargo,
@@ -43,7 +57,7 @@ export function decodeInviteToken(token: string): Partial<Perfil> | null {
     if (!parsed.email || !parsed.nome) return null;
 
     return {
-      id: parsed.id || `p-${Date.now()}`,
+      id: ensureValidUuid(parsed.id),
       nome: parsed.nome,
       email: parsed.email.toLowerCase(),
       cargo: parsed.cargo || 'Colaborador',
@@ -59,3 +73,4 @@ export function decodeInviteToken(token: string): Partial<Perfil> | null {
     return null;
   }
 }
+

@@ -83,15 +83,20 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    if (!anonKey || typeof anonKey !== 'string' || anonKey.length < 20) {
+    const cleanUrl = normalizeSupabaseUrl(url);
+    let cleanKey = (anonKey || '').trim();
+
+    // Se a chave não foi informada na requisição ou é máscara, reutiliza a chave salva
+    if (!cleanKey || cleanKey.includes('...')) {
+      cleanKey = getSupabaseAnonKey();
+    }
+
+    if (!cleanKey || cleanKey.length < 20) {
       return NextResponse.json(
         { success: false, error: 'Por favor, informe a Chave Anônima (Anon Key) pública do Supabase.' },
         { status: 400 }
       );
     }
-
-    const cleanUrl = normalizeSupabaseUrl(url);
-    const cleanKey = anonKey.trim();
 
     // 1. Testa a conexao real antes de persistir
     const testResult = await testSupabaseConnection(cleanUrl, cleanKey);
