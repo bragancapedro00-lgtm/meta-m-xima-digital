@@ -1,52 +1,52 @@
 [
   {
-    "id": "p-1",
+    "id": "fcbe4ded-aabf-40bc-a2ef-fdd9c2ceacc2",
     "nome": "Lucas Silva",
     "email": "lucas@metamaxima.com.br",
     "avatar_url": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80",
-    "cargo": "Head de Conteúdo & Estratégia",
+    "cargo": "Head de Conteúdo",
     "role": "gestor",
     "status": "ativo",
     "permissoes": {
-      "canCreateContent": true,
-      "canEditContent": true,
-      "canDeleteContent": true,
+      "canManageTeam": false,
       "canMoveKanban": true,
+      "canEditContent": true,
+      "canManageFiles": true,
+      "canCreateContent": true,
+      "canDeleteContent": true,
+      "canViewAnalytics": true,
       "canApproveContent": true,
       "canPublishContent": true,
-      "canManageFiles": true,
-      "canViewMarketing": true,
-      "canViewAnalytics": true,
-      "canManageIntegrations": true,
-      "canManageTeam": false
+      "canManageIntegrations": true
     },
-    "senha": "123456"
+    "senha": "123456",
+    "criado_em": "2026-09-07T14:59:43.944762+00:00"
   },
   {
-    "id": "p-2",
+    "id": "a8669041-5a33-47c4-b521-8fc0399972c6",
     "nome": "Mariana Costa",
     "email": "mariana@metamaxima.com.br",
     "avatar_url": "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80",
-    "cargo": "Copywriter & Roteirista",
+    "cargo": "Estrategista & Copywriter",
     "role": "social_media",
     "status": "ativo",
     "permissoes": {
-      "canCreateContent": true,
-      "canEditContent": true,
-      "canDeleteContent": false,
+      "canManageTeam": false,
       "canMoveKanban": true,
+      "canEditContent": true,
+      "canManageFiles": true,
+      "canCreateContent": true,
+      "canDeleteContent": false,
+      "canViewAnalytics": true,
       "canApproveContent": true,
       "canPublishContent": true,
-      "canManageFiles": true,
-      "canViewMarketing": true,
-      "canViewAnalytics": true,
-      "canManageIntegrations": false,
-      "canManageTeam": false
+      "canManageIntegrations": false
     },
-    "senha": "123456"
+    "senha": "123456",
+    "criado_em": "2026-09-07T14:59:43.944762+00:00"
   },
   {
-    "id": "p-3",
+    "id": "e0dea642-94ec-4a57-b2ff-fd9e4c577acc",
     "nome": "Pedro Santos",
     "email": "pedro@metamaxima.com.br",
     "avatar_url": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80",
@@ -54,22 +54,22 @@
     "role": "editor",
     "status": "ativo",
     "permissoes": {
-      "canCreateContent": true,
-      "canEditContent": true,
-      "canDeleteContent": false,
+      "canManageTeam": false,
       "canMoveKanban": true,
+      "canEditContent": true,
+      "canManageFiles": true,
+      "canCreateContent": true,
+      "canDeleteContent": false,
+      "canViewAnalytics": true,
       "canApproveContent": false,
       "canPublishContent": false,
-      "canManageFiles": true,
-      "canViewMarketing": false,
-      "canViewAnalytics": true,
-      "canManageIntegrations": false,
-      "canManageTeam": false
+      "canManageIntegrations": false
     },
-    "senha": "123456"
+    "senha": "123456",
+    "criado_em": "2026-09-07T14:59:43.944762+00:00"
   },
   {
-    "id": "p-4",
+    "id": "e45ab27a-bc9c-409a-9308-3328c03a49a1",
     "nome": "Camila Rocha",
     "email": "camila@metamaxima.com.br",
     "avatar_url": "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=150&auto=format&fit=crop&q=80",
@@ -77,18 +77,18 @@
     "role": "admin",
     "status": "ativo",
     "permissoes": {
-      "canCreateContent": true,
-      "canEditContent": true,
-      "canDeleteContent": true,
+      "canManageTeam": true,
       "canMoveKanban": true,
+      "canEditContent": true,
+      "canManageFiles": true,
+      "canCreateContent": true,
+      "canDeleteContent": true,
+      "canViewAnalytics": true,
       "canApproveContent": true,
       "canPublishContent": true,
-      "canManageFiles": true,
-      "canViewMarketing": true,
-      "canViewAnalytics": true,
-      "canManageIntegrations": true,
-      "canManageTeam": true
+      "canManageIntegrations": true
     },
-    "senha": "123456"
+    "senha": "123456",
+    "criado_em": "2026-09-07T14:59:43.944762+00:00"
   }
 ]

@@ -16,18 +16,24 @@ export function normalizeSupabaseUrl(inputUrl: string): string {
     return `https://${dashboardMatch[1]}.supabase.co`;
   }
 
-  // Remove caminhos finais como /rest/v1, /auth/v1, /settings/api ou barras no final
-  trimmed = trimmed.replace(/\/rest\/v1\/?$/i, '');
-  trimmed = trimmed.replace(/\/auth\/v1\/?$/i, '');
-  trimmed = trimmed.replace(/\/settings\/api\/?$/i, '');
-  trimmed = trimmed.replace(/\/+$/, '');
-
-  // Garante https:// se começou sem protocolo
-  if (!trimmed.startsWith('http://') && !trimmed.startsWith('https://')) {
-    trimmed = `https://${trimmed}`;
+  // Extrai apenas o protocolo e host (elimina qualquer sufixo como /rest/v1/, /auth/v1/, barras, etc.)
+  try {
+    if (!trimmed.startsWith('http://') && !trimmed.startsWith('https://')) {
+      trimmed = `https://${trimmed}`;
+    }
+    const parsed = new URL(trimmed);
+    return `${parsed.protocol}//${parsed.host}`;
+  } catch {
+    // Fallback com regex
+    trimmed = trimmed.replace(/\/rest\/v1\/?.*$/i, '');
+    trimmed = trimmed.replace(/\/auth\/v1\/?.*$/i, '');
+    trimmed = trimmed.replace(/\/settings\/api\/?.*$/i, '');
+    trimmed = trimmed.replace(/\/+$/, '');
+    if (!trimmed.startsWith('http://') && !trimmed.startsWith('https://')) {
+      trimmed = `https://${trimmed}`;
+    }
+    return trimmed;
   }
-
-  return trimmed;
 }
 
 // Obtem a URL do Supabase com prioridade para variaveis de ambiente e fallback local
@@ -125,31 +131,7 @@ export async function testSupabaseConnection(
       return { success: false, error: 'A chave anon do Supabase é inválida ou muito curta' };
     }
 
-    // 1. Testa a conectividade basica com a raiz da API PostgREST
-    try {
-      const pingRes = await fetch(`${url}/rest/v1/`, {
-        method: 'GET',
-        headers: {
-          apikey: anonKey,
-          Authorization: `Bearer ${anonKey}`,
-        },
-        cache: 'no-store',
-      });
-
-      if (pingRes.status === 401 || pingRes.status === 403) {
-        return {
-          success: false,
-          error: 'Chave anônima pública (anon key) inválida ou não autorizada. Copie a chave "anon public" em Project Settings > API no Supabase.',
-        };
-      }
-    } catch (netErr: any) {
-      return {
-        success: false,
-        error: `Não foi possível conectar ao endereço ${url}. Verifique se o projeto Supabase está ativo. (${netErr.message || 'Erro de rede'})`,
-      };
-    }
-
-    // 2. Consulta a tabela perfis para testar se ja existe
+    // Testa a consulta diretamente via cliente Supabase
     const testClient = createClient(url, anonKey, {
       auth: { persistSession: false },
     });
@@ -160,8 +142,7 @@ export async function testSupabaseConnection(
       .limit(1);
 
     if (error) {
-      // PGRST125 = "Invalid path specified in request URL" (PostgREST indica que a tabela nao existe)
-      // 42P01 = "relation public.perfis does not exist"
+      // Se for tabela inexistente (PostgREST retorna PGRST125 ou 42P01)
       const isTableMissing =
         error.code === 'PGRST125' ||
         error.code === '42P01' ||
@@ -176,7 +157,15 @@ export async function testSupabaseConnection(
           success: true,
           hasPerfisTable: false,
           normalizedUrl: url,
-          error: 'Conexão com o Supabase estabelecida com sucesso! A tabela "perfis" ainda não foi criada no banco.',
+          error: 'Conexão com o Supabase estabelecida com sucesso! Apenas execute o script SQL da tabela "perfis" no SQL Editor para ativar a sincronização.',
+        };
+      }
+
+      // Se o erro for de autenticação da chave
+      if (error.message?.toLowerCase().includes('jwt') || error.message?.toLowerCase().includes('api key') || error.code === 'PGRST301') {
+        return {
+          success: false,
+          error: 'Chave anônima pública (anon key) inválida ou expirada. Verifique se copiou a chave "anon public" em Project Settings > API.',
         };
       }
 
