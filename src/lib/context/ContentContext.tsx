@@ -1271,10 +1271,19 @@ export function ContentProvider({ children }: { children: ReactNode }) {
       };
       setProfiles((prev) => prev.map((p) => (p.id === existing.id ? finalMember : p)));
     } else {
+      // Gera ID com padrão UUID v4 seguro para compatibilidade imediata com Supabase
+      const newUuid = typeof crypto !== 'undefined' && crypto.randomUUID
+        ? crypto.randomUUID()
+        : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+            const r = (Math.random() * 16) | 0;
+            const v = c === 'x' ? r : (r & 0x3) | 0x8;
+            return v.toString(16);
+          });
+
       finalMember = {
         ...member,
         email: cleanEmail,
-        id: `p-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+        id: newUuid,
         criado_em: new Date().toISOString(),
         avatar_url: member.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(member.nome)}`,
         permissoes: member.permissoes || DEFAULT_ROLE_PERMISSIONS[member.role] || DEFAULT_ROLE_PERMISSIONS.editor,
@@ -1284,7 +1293,7 @@ export function ContentProvider({ children }: { children: ReactNode }) {
       setProfiles((prev) => [...prev, finalMember]);
     }
 
-    // Persiste no servidor para acesso imediato a partir de outros dispositivos
+    // Persiste no servidor (arquivo local + Supabase automático)
     try {
       await fetch('/api/team/members', {
         method: 'POST',
@@ -1295,9 +1304,12 @@ export function ContentProvider({ children }: { children: ReactNode }) {
       console.warn('Aviso ao sincronizar novo membro no servidor:', err);
     }
 
-    if (isSupabaseLive && supabase) {
+    // Se Supabase estiver ativo no cliente, envia diretamente também com upsert por email
+    if (isSupabaseConfigured() && supabase) {
       try {
-        await supabase.from('perfis').insert({
+        const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(finalMember.id);
+        const dbPayload: any = {
+          id: isUuid ? finalMember.id : undefined,
           nome: finalMember.nome,
           email: finalMember.email,
           avatar_url: finalMember.avatar_url,
@@ -1306,7 +1318,8 @@ export function ContentProvider({ children }: { children: ReactNode }) {
           status: finalMember.status,
           permissoes: finalMember.permissoes,
           senha: finalMember.senha,
-        });
+        };
+        await supabase.from('perfis').upsert(dbPayload, { onConflict: 'email' });
       } catch (err) {
         console.warn('Supabase addTeamMember error:', err);
       }
@@ -1339,18 +1352,29 @@ export function ContentProvider({ children }: { children: ReactNode }) {
           body: JSON.stringify({ member: targetUpdated }),
         });
       } catch {}
-    }
 
-    if (isSupabaseLive && supabase) {
-      try {
-        await supabase.from('perfis').update(updates).eq('id', id);
-      } catch (err) {
-        console.warn('Supabase updateTeamMember error:', err);
+      if (isSupabaseConfigured() && supabase) {
+        try {
+          const payload: any = {
+            nome: targetUpdated.nome,
+            email: targetUpdated.email,
+            avatar_url: targetUpdated.avatar_url,
+            cargo: targetUpdated.cargo,
+            role: targetUpdated.role,
+            status: targetUpdated.status,
+            permissoes: targetUpdated.permissoes,
+            senha: targetUpdated.senha,
+          };
+          await supabase.from('perfis').upsert(payload, { onConflict: 'email' });
+        } catch (err) {
+          console.warn('Supabase updateTeamMember error:', err);
+        }
       }
     }
   };
 
   const deleteTeamMember = async (id: string) => {
+    const memberToDelete = profiles.find((m) => m.id === id);
     setProfiles((prev) => prev.filter((m) => m.id !== id));
 
     try {
@@ -1359,9 +1383,9 @@ export function ContentProvider({ children }: { children: ReactNode }) {
       });
     } catch {}
 
-    if (isSupabaseLive && supabase) {
+    if (isSupabaseConfigured() && supabase && memberToDelete?.email) {
       try {
-        await supabase.from('perfis').delete().eq('id', id);
+        await supabase.from('perfis').delete().eq('email', memberToDelete.email.toLowerCase());
       } catch (err) {
         console.warn('Supabase deleteTeamMember error:', err);
       }
@@ -1401,11 +1425,21 @@ export function ContentProvider({ children }: { children: ReactNode }) {
         });
       } catch {}
 
-      if (isSupabaseLive && supabase) {
+      if (isSupabaseConfigured() && supabase) {
         try {
-          await supabase.from('perfis').update(targetMember).eq('id', existing.id);
+          const payload: any = {
+            nome: targetMember.nome,
+            email: targetMember.email,
+            avatar_url: targetMember.avatar_url,
+            cargo: targetMember.cargo,
+            role: targetMember.role,
+            status: targetMember.status,
+            permissoes: targetMember.permissoes,
+            senha: targetMember.senha,
+          };
+          await supabase.from('perfis').upsert(payload, { onConflict: 'email' });
         } catch (err) {
-          console.warn('Supabase updateTeamMember error:', err);
+          console.warn('Supabase inviteTeamMember error:', err);
         }
       }
     } else {
@@ -1455,11 +1489,35 @@ export function ContentProvider({ children }: { children: ReactNode }) {
           body: JSON.stringify({ member: updated }),
         });
       } catch {}
+
+      if (isSupabaseConfigured() && supabase) {
+        try {
+          const payload: any = {
+            nome: updated.nome,
+            email: updated.email,
+            avatar_url: updated.avatar_url,
+            cargo: updated.cargo,
+            role: updated.role,
+            status: updated.status,
+            permissoes: updated.permissoes,
+            senha: updated.senha,
+          };
+          await supabase.from('perfis').upsert(payload, { onConflict: 'email' });
+        } catch {}
+      }
       return updated;
     }
 
+    const newUuid = typeof crypto !== 'undefined' && crypto.randomUUID
+      ? crypto.randomUUID()
+      : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+          const r = (Math.random() * 16) | 0;
+          const v = c === 'x' ? r : (r & 0x3) | 0x8;
+          return v.toString(16);
+        });
+
     const newMember: Perfil = {
-      id: memberData.id || `p-${Date.now()}`,
+      id: memberData.id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(memberData.id) ? memberData.id : newUuid,
       nome: memberData.nome || 'Colaborador',
       email: cleanEmail,
       cargo: memberData.cargo || 'Membro da Equipe',
@@ -1484,6 +1542,24 @@ export function ContentProvider({ children }: { children: ReactNode }) {
         body: JSON.stringify({ member: newMember }),
       });
     } catch {}
+
+    if (isSupabaseConfigured() && supabase) {
+      try {
+        const payload: any = {
+          id: newMember.id,
+          nome: newMember.nome,
+          email: newMember.email,
+          avatar_url: newMember.avatar_url,
+          cargo: newMember.cargo,
+          role: newMember.role,
+          status: newMember.status,
+          permissoes: newMember.permissoes,
+          senha: newMember.senha,
+        };
+        await supabase.from('perfis').upsert(payload, { onConflict: 'email' });
+      } catch {}
+    }
+
     return newMember;
   };
 
@@ -1613,6 +1689,44 @@ export function ContentProvider({ children }: { children: ReactNode }) {
         }
       } catch (err) {
         console.warn('Aviso: erro ao sincronizar servidor durante login:', err);
+      }
+    }
+
+    // Se ainda não encontrou e Supabase estiver configurado, busca diretamente na tabela remota 'perfis'
+    if (!member && isSupabaseConfigured() && supabase) {
+      try {
+        const { data: dbUser, error: dbErr } = await supabase
+          .from('perfis')
+          .select('*')
+          .eq('email', cleanEmail)
+          .maybeSingle();
+
+        if (dbUser && !dbErr) {
+          member = {
+            id: dbUser.id,
+            nome: dbUser.nome,
+            email: dbUser.email.toLowerCase(),
+            avatar_url: dbUser.avatar_url,
+            cargo: dbUser.cargo,
+            role: dbUser.role,
+            status: dbUser.status || 'ativo',
+            permissoes: dbUser.permissoes,
+            senha: dbUser.senha || '123456',
+            criado_em: dbUser.criado_em,
+          };
+          setProfiles((prev) => {
+            const map = new Map<string, Perfil>();
+            for (const p of prev) map.set(p.email.toLowerCase(), p);
+            map.set(member!.email.toLowerCase(), member!);
+            const merged = Array.from(map.values());
+            try {
+              localStorage.setItem(LOCAL_STORAGE_KEY_PROFILES, JSON.stringify(merged));
+            } catch {}
+            return merged;
+          });
+        }
+      } catch (err) {
+        console.warn('[Supabase] Erro ao buscar colaborador diretamente no Supabase:', err);
       }
     }
 
