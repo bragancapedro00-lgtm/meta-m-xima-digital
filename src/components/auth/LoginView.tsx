@@ -23,7 +23,7 @@ import {
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { profiles, loginWithEmail, registerInvitedMember } = useContent();
+  const { profiles, loginWithEmail, loginWithInviteToken, registerInvitedMember } = useContent();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -34,6 +34,16 @@ function LoginForm() {
   const [selectedMemberName, setSelectedMemberName] = useState<string | null>(null);
   const [invitePayload, setInvitePayload] = useState<Partial<Perfil> | null>(null);
   const passwordInputRef = useRef<HTMLInputElement>(null);
+  const redirectTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Previne memory leaks limpando qualquer temporizador ativo ao desmontar o componente
+  useEffect(() => {
+    return () => {
+      if (redirectTimerRef.current) {
+        clearTimeout(redirectTimerRef.current);
+      }
+    };
+  }, []);
 
   // Pre-fill email or decode self-contained invite token from URL
   useEffect(() => {
@@ -70,7 +80,15 @@ function LoginForm() {
     setErrorMsg('');
 
     try {
-      const res = await loginWithEmail(email.trim(), password.trim());
+      let res;
+      const inviteToken = searchParams.get('invite') || searchParams.get('token');
+
+      // Se o usuário veio por um link de convite válido, autentica instantaneamente sem dependência de rede
+      if (inviteToken && invitePayload) {
+        res = await loginWithInviteToken(inviteToken);
+      } else {
+        res = await loginWithEmail(email.trim(), password.trim());
+      }
 
       if (!res.success) {
         setErrorMsg(res.error || 'Não foi possível autenticar.');
@@ -80,9 +98,9 @@ function LoginForm() {
 
       if (res.user) {
         setSuccessUser(res.user);
-        setTimeout(() => {
+        redirectTimerRef.current = setTimeout(() => {
           router.push('/kanban');
-        }, 1200);
+        }, 1000);
       }
     } catch (err: any) {
       setErrorMsg('Erro inesperado ao realizar login.');
@@ -108,6 +126,10 @@ function LoginForm() {
           <img
             src="/logo.png"
             alt="Meta Máxima Logo"
+            width={64}
+            height={64}
+            fetchPriority="high"
+            loading="eager"
             className="h-16 w-auto object-contain drop-shadow-md"
           />
         </div>

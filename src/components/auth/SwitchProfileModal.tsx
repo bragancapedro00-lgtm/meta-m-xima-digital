@@ -41,6 +41,14 @@ export default function SwitchProfileModal({
     }
   }, [isOpen, targetUser]);
 
+  const timerRef = React.useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, []);
+
   if (!isOpen || !targetUser) return null;
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -55,7 +63,7 @@ export default function SwitchProfileModal({
 
     const expectedPassword = targetUser.senha || '123456';
 
-    setTimeout(() => {
+    timerRef.current = setTimeout(() => {
       if (password.trim() === expectedPassword) {
         onConfirmSwitch(targetUser);
         onClose();

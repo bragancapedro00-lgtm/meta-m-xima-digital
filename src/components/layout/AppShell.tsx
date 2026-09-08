@@ -130,15 +130,15 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     setIsEditProfileOpen(false);
   };
 
-  // Authentication guard: if user is not authenticated and not on /login, redirect to /login
+  // Authentication guard: if user is not authenticated and not on /login or /convite, redirect to /login
   useEffect(() => {
-    if (!isAuthenticated && pathname !== '/login') {
+    if (!isAuthenticated && pathname !== '/login' && pathname !== '/convite') {
       router.push('/login');
     }
   }, [isAuthenticated, pathname, router]);
 
-  // If we are on the login page, render only the login screen without the dashboard shell
-  if (pathname === '/login') {
+  // If we are on the login or convite page, render only the page without the dashboard shell
+  if (pathname === '/login' || pathname === '/convite') {
     return <>{children}</>;
   }
 
@@ -157,6 +157,10 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           <img
             src="/logo.png"
             alt="BRG Logo"
+            width={36}
+            height={36}
+            fetchPriority="high"
+            loading="eager"
             className="h-9 w-9 rounded-lg object-contain bg-black border border-zinc-800 p-0.5 shrink-0 shadow"
           />
           <div className="flex flex-col min-w-0">

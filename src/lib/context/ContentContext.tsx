@@ -103,6 +103,7 @@ interface ContentContextType {
   setCurrentUser: (perfil: Perfil) => void;
   isAuthenticated: boolean;
   loginWithEmail: (email: string, senha?: string) => Promise<{ success: boolean; error?: string; user?: Perfil }>;
+  loginWithInviteToken: (token: string) => Promise<{ success: boolean; error?: string; user?: Perfil }>;
   logout: () => void;
 
   // New Operational Entities & Methods
@@ -1652,6 +1653,71 @@ export function ContentProvider({ children }: { children: ReactNode }) {
     return { success: true, user: member };
   };
 
+  const loginWithInviteToken = async (
+    token: string
+  ): Promise<{ success: boolean; error?: string; user?: Perfil }> => {
+    try {
+      const decoded = decodeInviteToken(token);
+      if (!decoded || !decoded.email || !decoded.nome) {
+        return { success: false, error: 'Token de convite inválido ou expirado.' };
+      }
+
+      const cleanEmail = decoded.email.trim().toLowerCase();
+      const existing = profiles.find((p) => p.email.toLowerCase() === cleanEmail);
+
+      const member: Perfil = {
+        id: decoded.id || existing?.id || `p-${Date.now()}`,
+        nome: decoded.nome,
+        email: cleanEmail,
+        cargo: decoded.cargo || existing?.cargo || 'Colaborador',
+        role: decoded.role || existing?.role || 'social_media',
+        status: 'ativo',
+        senha: decoded.senha || existing?.senha || '123456',
+        permissoes:
+          decoded.permissoes ||
+          existing?.permissoes ||
+          DEFAULT_ROLE_PERMISSIONS[decoded.role || 'social_media'] ||
+          DEFAULT_ROLE_PERMISSIONS.editor,
+        avatar_url:
+          decoded.avatar_url ||
+          existing?.avatar_url ||
+          `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(decoded.nome)}`,
+        criado_em: existing?.criado_em || new Date().toISOString(),
+      };
+
+      // Atualiza o estado local imediatamente
+      setProfiles((prev) => {
+        const has = prev.some((p) => p.email.toLowerCase() === cleanEmail);
+        const next = has
+          ? prev.map((p) => (p.email.toLowerCase() === cleanEmail ? member : p))
+          : [...prev, member];
+        try {
+          localStorage.setItem(LOCAL_STORAGE_KEY_PROFILES, JSON.stringify(next));
+        } catch {}
+        return next;
+      });
+
+      setCurrentUser(member);
+      setIsAuthenticated(true);
+
+      try {
+        localStorage.removeItem(LOCAL_STORAGE_KEY_LOGGED_OUT);
+        localStorage.setItem(LOCAL_STORAGE_KEY_SESSION, JSON.stringify(member));
+      } catch {}
+
+      // Sincroniza em segundo plano sem bloquear o fluxo
+      fetch('/api/team/members', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ member }),
+      }).catch(() => {});
+
+      return { success: true, user: member };
+    } catch (err: any) {
+      return { success: false, error: 'Erro ao validar token de convite.' };
+    }
+  };
+
   const logout = () => {
     setIsAuthenticated(false);
     localStorage.setItem(LOCAL_STORAGE_KEY_LOGGED_OUT, 'true');
@@ -1807,6 +1873,7 @@ export function ContentProvider({ children }: { children: ReactNode }) {
         canPerform,
         isAuthenticated,
         loginWithEmail,
+        loginWithInviteToken,
         logout,
         filters,
         setFilters,

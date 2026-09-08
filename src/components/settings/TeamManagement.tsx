@@ -25,6 +25,8 @@ import {
   X,
   Copy,
   Sparkles,
+  Radio,
+  Wifi,
 } from 'lucide-react';
 
 export default function TeamManagement() {
@@ -65,8 +67,24 @@ export default function TeamManagement() {
     networkOrigin: string;
     isLocalhost: boolean;
     primaryIp: string;
+    adapterName?: string;
   } | null>(null);
-  const [useNetworkAddress, setUseNetworkAddress] = useState(true);
+  const [urlMode, setUrlMode] = useState<'network' | 'localhost' | 'custom'>('network');
+  const [customDomain, setCustomDomain] = useState('');
+
+  // Previne vazamentos de memória (memory leaks) registrando e limpando todos os timers ao desmontar
+  const timeoutsRef = React.useRef<NodeJS.Timeout[]>([]);
+  const registerTimeout = React.useCallback((fn: () => void, ms: number) => {
+    const t = setTimeout(fn, ms);
+    timeoutsRef.current.push(t);
+    return t;
+  }, []);
+
+  React.useEffect(() => {
+    return () => {
+      timeoutsRef.current.forEach(clearTimeout);
+    };
+  }, []);
 
   React.useEffect(() => {
     fetch('/api/team/network-info')
@@ -90,7 +108,7 @@ export default function TeamManagement() {
     const link = `${origin}/login?email=${encodeURIComponent(email)}`;
     navigator.clipboard.writeText(link);
     setCopiedMap((prev) => ({ ...prev, [id]: true }));
-    setTimeout(() => {
+    registerTimeout(() => {
       setCopiedMap((prev) => ({ ...prev, [id]: false }));
     }, 3000);
   };
@@ -485,7 +503,7 @@ export default function TeamManagement() {
                     const origin = typeof window !== 'undefined' ? window.location.origin : '';
                     navigator.clipboard.writeText(`${origin}/login`);
                     setCopiedUniversalLink(true);
-                    setTimeout(() => setCopiedUniversalLink(false), 2000);
+                    registerTimeout(() => setCopiedUniversalLink(false), 2000);
                   }}
                   className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-white text-xs font-semibold shrink-0 border border-zinc-700"
                 >
@@ -520,9 +538,14 @@ export default function TeamManagement() {
                   setIsInviting(true);
                   setInviteError('');
                   try {
-                    const effectiveBaseUrl = (useNetworkAddress && networkInfo?.isLocalhost && networkInfo.networkOrigin)
-                      ? networkInfo.networkOrigin
-                      : (typeof window !== 'undefined' ? window.location.origin : '');
+                    let effectiveBaseUrl = typeof window !== 'undefined' ? window.location.origin : '';
+                    if (urlMode === 'network' && networkInfo?.networkOrigin) {
+                      effectiveBaseUrl = networkInfo.networkOrigin;
+                    } else if (urlMode === 'localhost') {
+                      effectiveBaseUrl = 'http://localhost:3000';
+                    } else if (urlMode === 'custom' && customDomain.trim()) {
+                      effectiveBaseUrl = customDomain.trim().replace(/\/+$/, '');
+                    }
 
                     const res = await inviteTeamMember({
                       nome: inviteNome.trim(),
@@ -541,21 +564,54 @@ export default function TeamManagement() {
                 }}
                 className="space-y-3.5 border-t border-zinc-800 pt-4"
               >
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                  <h4 className="text-xs font-bold text-zinc-200 uppercase tracking-wider">
-                    Enviar Convite Personalizado
-                  </h4>
-                  {networkInfo?.isLocalhost && (
-                    <label className="flex items-center gap-2 text-[11px] text-zinc-400 cursor-pointer bg-zinc-900 border border-zinc-800 px-2.5 py-1 rounded-lg">
-                      <input
-                        type="checkbox"
-                        checked={useNetworkAddress}
-                        onChange={(e) => setUseNetworkAddress(e.target.checked)}
-                        className="rounded border-zinc-700 text-blue-600 focus:ring-0 h-3.5 w-3.5"
-                      />
-                      <span>Gerar link para outro dispositivo ({networkInfo.primaryIp})</span>
-                    </label>
-                  )}
+                <div className="space-y-2 p-3 rounded-xl bg-zinc-950 border border-zinc-800">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-bold text-zinc-300 uppercase tracking-wider flex items-center gap-1.5">
+                      <Radio className="h-3.5 w-3.5 text-blue-400" />
+                      Dispositivo de Destino do Convite
+                    </span>
+                    {networkInfo && (
+                      <span className="text-[10px] text-emerald-400 font-mono">
+                        Rede: {networkInfo.primaryIp} ({networkInfo.adapterName})
+                      </span>
+                    )}
+                  </div>
+                  
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs pt-0.5">
+                    <button
+                      type="button"
+                      onClick={() => setUrlMode('network')}
+                      className={`flex flex-col text-left p-2.5 rounded-lg border transition-all ${
+                        urlMode === 'network'
+                          ? 'bg-blue-500/10 border-blue-500/40 text-white ring-1 ring-blue-500/30'
+                          : 'bg-zinc-900 border-zinc-800 text-zinc-400 hover:border-zinc-700'
+                      }`}
+                    >
+                      <span className="font-bold text-xs flex items-center gap-1">
+                        📱 Outro Aparelho (Wi-Fi / Celular)
+                      </span>
+                      <span className="text-[10px] text-zinc-400 font-mono mt-0.5 truncate">
+                        {networkInfo?.networkOrigin || 'http://192.168.0.117:3000'}
+                      </span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setUrlMode('localhost')}
+                      className={`flex flex-col text-left p-2.5 rounded-lg border transition-all ${
+                        urlMode === 'localhost'
+                          ? 'bg-blue-500/10 border-blue-500/40 text-white ring-1 ring-blue-500/30'
+                          : 'bg-zinc-900 border-zinc-800 text-zinc-400 hover:border-zinc-700'
+                      }`}
+                    >
+                      <span className="font-bold text-xs flex items-center gap-1">
+                        💻 Neste Computador (Local)
+                      </span>
+                      <span className="text-[10px] text-zinc-400 font-mono mt-0.5">
+                        http://localhost:3000
+                      </span>
+                    </button>
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -672,7 +728,7 @@ export default function TeamManagement() {
                       onClick={() => {
                         navigator.clipboard.writeText(generatedInvite.inviteUrl);
                         setCopiedInviteUrl(true);
-                        setTimeout(() => setCopiedInviteUrl(false), 2000);
+                        registerTimeout(() => setCopiedInviteUrl(false), 2000);
                       }}
                       className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-white text-xs font-semibold shrink-0 border border-zinc-700"
                     >
@@ -728,7 +784,7 @@ Faça login para iniciar sua colaboração!`}
                         const msg = `🚀 Convite para a Plataforma Meta Máxima\n\nOlá ${generatedInvite.member.nome}! Você foi convidado para a nossa plataforma de Gestão de Conteúdo e Performance.\n\n🔗 Link de Acesso: ${generatedInvite.inviteUrl}\n✉️ E-mail: ${generatedInvite.member.email}\n🔑 Senha Inicial: ${generatedInvite.member.senha || '123456'}\nCargo: ${generatedInvite.member.cargo}\n\nFaça login para iniciar sua colaboração!`;
                         navigator.clipboard.writeText(msg);
                         setCopiedInviteText(true);
-                        setTimeout(() => setCopiedInviteText(false), 2000);
+                        registerTimeout(() => setCopiedInviteText(false), 2000);
                       }}
                       className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-white text-zinc-950 hover:bg-zinc-200 text-xs font-bold shadow"
                     >
